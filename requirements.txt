@@ -1,0 +1,7 @@
+pandas
+numpy
+scikit-learn
+openai
+python-dotenv
+pydantic
+markdown-pdf
