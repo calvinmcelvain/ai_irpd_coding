@@ -235,3 +235,62 @@ class IRPD:
             print(f"  Stage {stage} complete!")
         
         print(f"Test complete, check {self.OUTPATH} for output.")
+    
+    def run_vartest(self, instance: str, ra: str, stage: str, treatment: str, N: int, **kwargs):
+        """
+        Run replication IRPD test.
+
+        Args:
+            instance (str): The instance type for the summaries used in test.
+            ra (str): The RA who wrote the summaries.
+            stage (str): The stage to be run.
+            treatment (str): The treatment to be run.
+            N (int): The number of replications.
+            **kwargs:
+                - max_instances (int): Maximum number of instances used in Stage 2 and/or 3.
+        """
+        # Default values
+        max_instances = None
+        
+        # Valid options
+        valid_stages = ['0', '1', '1r', '1c', '2', '3']
+        valid_instances = ['uni', 'uniresp', 'switch', 'first']
+        valid_ras = ['thi', 'eli', 'both', 'exp']
+        valid_treatments = ['noise', 'no_noise', 'merged']
+        valid_kwargs = ['max_instances']
+        valid_structures = {
+            '0': outstr.Stage_0_Structure,
+            '1': outstr.Stage_1_Structure,
+            '1r': outstr.Stage_1r_Structure,
+            '1c': outstr.Stage_1c_Structure,
+            '2': outstr.Stage_2_Structure,
+            '3': outstr.Stage_3_Structure
+        }
+        
+        # Validate arguments
+        f._validate_arg([stage], valid_stages, "stage")
+        f._validate_arg([ra], valid_ras, "ra")
+        f._validate_arg([treatment], valid_treatments, "treatment")
+        f._validate_arg([instance], valid_instances, "instance")
+        
+        if N < 1:
+            raise ValueError(f"Invalid argument: 'N'. Must be greater than 0.")
+        elif N == 1:
+            print("Note: 'N' is equal to 1, this is not a replication test.")
+
+        for key, value in kwargs.items():
+            if key not in valid_kwargs:
+                raise ValueError(f"Invalid argument: '{key}'. Allowed arguments are: {valid_kwargs}.")
+            elif key == 'max_instances':
+                if stage in ['2', '3']:
+                    max_instances = value
+                else:
+                    print(f"Note: 'max_instances' is not used in Stage {stage}.")
+        
+        # Getting test directory
+        test_dir = f.get_test_directory(
+            output_dir=self.OUTPATH,
+            instance=instance,
+            test_type='vartest',
+            stage=[stage],
+        )
