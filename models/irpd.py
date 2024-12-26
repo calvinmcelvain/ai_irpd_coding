@@ -27,7 +27,7 @@ class IRPD:
         
         Args:
             dir_path (str): Main directory path.
-            gpt_instance (GPT object): GPT model instance.
+            gpt_instance (GPT object, optional): GPT model instance. Defaults to None.
         """
         self.PATH = dir_path
         if gpt_instance is not None:
@@ -36,9 +36,8 @@ class IRPD:
             self.gpt = gpt_mod.GPT.default()
         self.OUTPATH = os.path.join(dir_path, 'output')
         self.PROMPTPATH = os.path.join(dir_path, 'prompts')
-        os.makedirs(self.PATH, exist_ok=True)
-        os.makedirs(self.OUTPATH, exist_ok=True)
-        os.makedirs(self.PROMPTPATH, exist_ok=True)
+        for path in [self.PATH, self.OUTPATH, self.PROMPTPATH]:
+            os.makedirs(path, exist_ok=True)
     
     def reset_dir_path(self, dir_path: str) -> None:
         """Reset the main directory path."""
@@ -71,9 +70,9 @@ class IRPD:
 
         Args:
             instance (str): The instance type for the summaries used in test.
-            ras (list[str] | str, optional): The RA or RAs who wrote the summaries. Defaults to ['eli', 'thi', 'both'] or ['exp'] if stages includes 0.
-            stages (list[str] | str, optional): A set or single stage to be run. Defaults to ['0', '1', '1r', '1c', '2', '3'].
-            treatments (list[str] | str, optional): A set or single treatment to be run. Defaults to ['noise', 'no_noise', 'merged'].
+            ras (list[str] | str, optional): The RA or RAs who wrote the summaries. Defaults to ['eli', 'thi', 'both'] or ['exp'] if stages includes 0. Defaults to None.
+            stages (list[str] | str, optional): A set or single stage to be run. Defaults to ['1', '1r', '1c', '2', '3']. Defaults to None.
+            treatments (list[str] | str, optional): A set or single treatment to be run. Defaults to ['noise', 'no_noise', 'merged']. Defaults to None.
             test_type (str, optional): The type of test to be run. Defaults to 'test'.
             **kwargs:
                 - max_instances (int): Maximum number of instances used in Stage 2 and/or 3.
