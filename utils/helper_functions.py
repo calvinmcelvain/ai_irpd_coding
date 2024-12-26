@@ -39,11 +39,15 @@ def write_file(file_path: str, file_write):
     file.write(file_write)    
 
 
-def get_test_directory(output_dir: str, instance: str, test_type: str, stage: list, ra_num: int, treatment_num: int) -> list[str]:
+def get_test_directory(output_dir: str, test_type: str, stage: list = None, instance: str = None, ra_num: int = 1, treatment_num: int = 1) -> list[str]:
     """
     Creates test directory path.
     """
-    is_new_test = '0' in stage or '1' in stage
+    if (instance is None or stage is None) and test_type != 'vartest':
+        raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
+    
+    if test_type != 'vartest':
+        is_new_test = '0' in stage or '1' in stage
     
     if test_type == 'test':
         # Construct the instance directory path
@@ -80,8 +84,27 @@ def get_test_directory(output_dir: str, instance: str, test_type: str, stage: li
         last_subtest_num = max(subtest_numbers, default=0)
         subtest_dir = os.path.join(subtest_dir, str(last_subtest_num + (1 if is_new_test else 0)))
         return [subtest_dir]
+    elif test_type == 'vartest':
+        # Construct the var_tests directory path
+        instance_dir = os.path.join(output_dir, 'var_tests')
+        os.makedirs(instance_dir, exist_ok=True)
+        
+        # Get existing test numbers
+        test_numbers = [
+            int(re.findall(r'\d+', name)[0])
+            for name in os.listdir(instance_dir)
+            if name.startswith('test_') and re.findall(r'\d+', name)
+        ]
+        
+        # Determine the base test number
+        last_test_num = max(test_numbers, default=0)
+        
+        # Generate test directory
+        test_dir = os.path.join(instance_dir, f"test_{last_test_num + 1}")
+        return [test_dir]
+        
 
-    raise ValueError("Invalid test_type. Must be 'test' or 'subtest'.")
+    raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
 
 
 def get_test_number(test_dir: str) -> int:
