@@ -19,21 +19,28 @@ importlib.reload(gpt_mod)
 importlib.reload(outstr)
 
 
+model_configs = {
+    'base': gpt_mod.GPTConfig(seed=1240034),
+    'res1': gpt_mod.GPTConfig(temperature=1.0),
+    'res2': gpt_mod.GPTConfig(),
+    'res3': gpt_mod.GPTConfig(temperature=1.0, seed=1240034),
+}
+
 
 class IRPD:
-    def __init__(self, dir_path: str, gpt_instance: gpt_mod.GPT = None):
+    def __init__(self, dir_path: str, gpt_model: gpt_mod.GPTConfig = None):
         """
         Initializing instance for TESTING.
         
         Args:
             dir_path (str): Main directory path.
-            gpt_instance (GPT object, optional): GPT model instance. Defaults to None.
+            gpt_model (GPTConfig object, optional): GPT model confgis. Defaults to base.
         """
         self.PATH = dir_path
-        if gpt_instance is not None:
-            self.gpt = gpt_instance
+        if gpt_model:
+            self.gpt = gpt_mod.GPT.default(config=gpt_model)
         else:
-            self.gpt = gpt_mod.GPT.default()
+            self.gpt = gpt_mod.GPT.default(config=model_configs['base'])
         self.OUTPATH = os.path.join(dir_path, 'output')
         self.PROMPTPATH = os.path.join(dir_path, 'prompts')
         for path in [self.PATH, self.OUTPATH, self.PROMPTPATH]:

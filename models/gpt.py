@@ -37,7 +37,7 @@ class GPT:
         self.config = config
 
     @classmethod
-    def default(cls):
+    def default(cls, config: GPTConfig = GPTConfig()):
         """
         Creating a default GPT instance.
         """
@@ -45,7 +45,7 @@ class GPT:
             api_key=os.environ.get("API_KEY"),
             organization=os.environ.get("ORG"),
             project=os.environ.get("PROJECT"),
-            config=GPTConfig()
+            config=config
         )
 
     def gpt_request(self, sys: str, user: str, output_structure: object = None, max_retries: int = 3, timeout: int = 30) -> dict:
