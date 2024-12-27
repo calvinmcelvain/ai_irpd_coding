@@ -159,8 +159,8 @@ class IRPD:
             test_info = dict(instance=instance, ra=ra, treatment=treatment, stage=stage)
             
             # Getting prompts
-            system = f.get_system_prompt(test_info=test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-            user = f.get_user_prompt(test_info=test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
+            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
 
             meta = {t: 0 for t in system.keys()}
             if stage in ['1', '1r', '1c']:
@@ -234,7 +234,7 @@ class IRPD:
                         
                     print(f"\n  Completed {t} instance!")
                 print("  Aggregating responses and making dataframe...")
-                f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, test_info=test_info, max_instances=max_instances)
+                f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
                 
             # Writing test information to the specified directory
             f.write_test_info(meta=meta, test_dir=test_dir, model_info=self.gpt.config, data_file=test_info, stage=stage)

@@ -135,13 +135,10 @@ def get_instance_types(instance: str) -> list[str]:
     return instance_types
 
 
-def get_system_prompt(test_info: dict, prompt_path: str, test_path: str) -> dict:
+def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt_path: str, test_path: str) -> dict:
     """
     Gets and returns dictionary of system prompts.
     """
-    # Base info
-    instance, ra, treatment, stage = test_info.values()
-    
     # Getting instance types for instance stages
     instance_types = get_instance_types(instance=instance)
     
@@ -171,12 +168,10 @@ def get_system_prompt(test_info: dict, prompt_path: str, test_path: str) -> dict
     return system_prompts
 
 
-def get_user_prompt(test_info: dict , main_dir: str, test_dir: str, max_instances: int | None) -> dict:
+def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir: str, test_dir: str, max_instances: int | None) -> dict:
     """
     Gets and returns dictionary of user prompts.
     """
-    instance, ra, treatment, stage = test_info.values()
-    
     # Getting instance types for instance stages
     instance_types = get_instance_types(instance=instance)
     
@@ -418,8 +413,7 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
     write_file(file_path=info_dir, file_write=test_info_file)
     
 
-def build_gpt_output(test_dir: str, main_dir: str, test_info: dict, max_instances: int = None):
-    instance, ra, treatment, stage = test_info.values()
+def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None):
     test_num = get_test_number(test_dir=test_dir)
     test_df = get_user_prompt(test_info=dict(
         instance=instance,
