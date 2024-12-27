@@ -331,7 +331,9 @@ class IRPD:
             test_args = (test_info, test_dir)
             if stage in {'1', '1r'}:
                 request_info = getattr(self, self._test_methods[stage])(*test_args)
+                meta = {t: 0 for t in request_info.keys()}
                 for t, response in request_info.items():
+                    meta[t] = response['meta']
                     f.write_test(
                         test_dir=test_dir,
                         stage=stage,
