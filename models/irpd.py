@@ -331,7 +331,6 @@ class IRPD:
             test_args = (test_info, test_dir)
             if stage in {'1', '1r'}:
                 request_info = getattr(self, self._test_methods[stage])(*test_args)
-                f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
                 for t, response in request_info.items():
                     f.write_test(
                         test_dir=test_dir,
@@ -341,6 +340,7 @@ class IRPD:
                         user=str(response['user']),
                         response=response['response']
                     )
+                f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
             elif stage in {'2', '3'}:
                 meta = getattr(self, self._test_methods[stage])(*test_args, max_instances=max_instances)
                 f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
