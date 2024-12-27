@@ -236,6 +236,7 @@ class IRPD:
                     meta[t].usage.completion_tokens += response_dict['meta'].usage.completion_tokens
                     meta[t].usage.prompt_tokens += response_dict['meta'].usage.prompt_tokens
                     meta[t].usage.total_tokens += response_dict['meta'].usage.total_tokens
+            print("\n")
         return meta
     
     # Public methods

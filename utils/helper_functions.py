@@ -180,18 +180,20 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
         t: pd.read_csv(os.path.join(main_dir, f"data/test/{instance}_{treatment}_{ra}_{t}.csv"))
         for t in instance_types
     }
+    for t in instance_types:
+        df = data_frames[t]
+        df['window_number'] = df['window_number'].astype(int)
     
     # If stage is 0, 1, or 2, user prompt is the summary data/experimental data (Stage 0)
     if stage in ['0', '1', '2']:
         user_prompts = {t: '' for t in instance_types}
         for t in instance_types:
             df = data_frames[t]
-            df['window_number'] = df['window_number'].astype(int)
-            df = df[:max_instances] if max_instances is not None else df
             # If stage 1, user prompt is dictionary of full df
             if stage == '1':
                 user_prompts[t] = df.to_dict('records')
             else:
+                df = df[:max_instances] if max_instances is not None else df
                 user_prompts[t] = df
     # Stage 1r and 1c user prompts are the responses of stage 1/1r
     elif stage in ['1r', '1c']:
@@ -202,7 +204,6 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
         for t in instance_types:
             df = data_frames[t]
             df = df[:max_instances] if max_instances is not None else df
-            df['window_number'] = df['window_number'].astype(int)
             for file in os.listdir(os.path.join(test_dir, f"raw/stage_2_{t}/responses")):
                 if file.endswith("response.txt"):
                     json_response = json.loads(file_to_string(os.path.join(test_dir, f"raw/stage_2_{t}/responses/{file}")))
