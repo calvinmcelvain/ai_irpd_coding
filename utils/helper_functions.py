@@ -415,12 +415,7 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
 
 def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None):
     test_num = get_test_number(test_dir=test_dir)
-    test_df = get_user_prompt(test_info=dict(
-        instance=instance,
-        ra=ra,
-        treatment=treatment,
-        stage='2'
-    ), main_dir=main_dir, test_dir=test_dir, max_instances=max_instances)
+    test_df = get_user_prompt(instance=instance, ra=ra, treatment=treatment, stage='2', main_dir=main_dir, test_dir=test_dir, max_instances=max_instances)
     
     if stage not in {'2', '3'}:
         raise ValueError(f"Can only build GPT output if stage in ['2', '3']. Got: {stage}")

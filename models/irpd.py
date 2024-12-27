@@ -46,6 +46,199 @@ class IRPD:
         for path in [self.PATH, self.OUTPATH, self.PROMPTPATH]:
             os.makedirs(path, exist_ok=True)
     
+    # Internal variables
+    _valid_stages = ['0', '1', '1r', '1c', '2', '3']
+    _valid_instances = ['uni', 'uniresp', 'switch', 'first', 'uni_switch']
+    _valid_ras = ['thi', 'eli', 'both', 'exp']
+    _valid_treatments = ['noise', 'no_noise', 'merged']
+    _valid_types = ['test', 'subtest']
+    _valid_kwargs = ['max_instances']
+    _valid_structures = {
+        '0': outstr.Stage_0_Structure,
+        '1': outstr.Stage_1_Structure,
+        '1r': outstr.Stage_1r_Structure,
+        '1c': outstr.Stage_1c_Structure,
+        '2': outstr.Stage_2_Structure,
+        '3': outstr.Stage_3_Structure
+    }
+    _test_methods = {
+        '1': '_stage_1',
+        '1r': '_stage_1r',
+        '1c': '_stage_1c',
+        '2': '_stage_2',
+        '3': '_stage_3'
+    }
+    
+    # Internal methods
+    def _stage_1(self, test_info: dict, test_dir: str):
+        """
+        Stage 1 of IRPD test.
+        """
+        # Getting prompts
+        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+        
+        # Iterating through instances
+        meta = {t: 0 for t in system.keys()}
+        for t in system.keys():
+            # Setting max tokens
+            self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
+            
+            # GPT requests
+            response_dict = self.gpt.gpt_request(
+                sys = str(system[t]),
+                user = str(user[t]),
+                output_structure = self._valid_structures['1']
+            )
+
+            # Writing request info
+            f.write_test(
+                test_dir=test_dir,
+                stage='1',
+                instance_type=t,
+                system=str(system),
+                user=str(user),
+                response=response_dict['response']
+            )
+            meta[t] = response_dict['meta']
+        return meta
+    
+    def _stage_1r(self, test_info: dict, test_dir: str):
+        """
+        Stage 1r of IRPD test.
+        """
+        # Getting prompts
+        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+        
+        # Iterating through instances
+        meta = {t: 0 for t in system.keys()}
+        for t in system.keys():
+            # Setting max tokens
+            self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
+            
+            # GPT requests
+            response_dict = self.gpt.gpt_request(
+                sys = str(system[t]),
+                user = str(user[t]),
+                output_structure = self._valid_structures['1r']
+            )
+
+            # Writing request info
+            f.write_test(
+                test_dir=test_dir,
+                stage='1r',
+                instance_type=t,
+                system=str(system),
+                user=str(user),
+                response=response_dict['response']
+            )
+            meta[t] = response_dict['meta']
+        return meta
+    
+    def _stage_1c(self, test_info: dict, test_dir: str):
+        pass
+    
+    def _stage_2(self, test_info: dict, test_dir: str, max_instances: int = None):
+        # Getting prompts
+        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
+        
+        # Iterating through instances
+        meta = {t: 0 for t in system.keys()}
+        for t in system.keys():
+            # Setting max tokens
+            self.gpt.config = gpt_mod.GPTConfig(max_tokens=600)
+            
+            # Calculate interval for printing dots
+            loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
+            print(f"  Making {t} stage 2 requests", end="")
+            
+            # Iterative GPT requests
+            system_prompt = system[t]
+            stage_structure = self._valid_structures['2']
+            for i, row in enumerate(user[t].itertuples(index=False), start=1):
+                # Dot loader
+                if i % loader_interval == 0 or i == len(user[t]):
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+                
+                # GPT requests
+                response_dict = self.gpt.gpt_request(
+                    sys = str(system_prompt),
+                    user = str(row),
+                    output_structure = stage_structure
+                )
+                
+                # Writing request info
+                f.write_test(
+                    test_dir=test_dir,
+                    stage='2',
+                    instance_type=t,
+                    system=str(system),
+                    user=row,
+                    window_number=row['window_number'] if isinstance(row, dict) else row.window_number,
+                    response=response_dict['response']
+                )
+                if i == 1:
+                    meta[t] = response_dict['meta']
+                else:
+                    meta[t].usage.completion_tokens += response_dict['meta'].usage.completion_tokens
+                    meta[t].usage.prompt_tokens += response_dict['meta'].usage.prompt_tokens
+                    meta[t].usage.total_tokens += response_dict['meta'].usage.total_tokens
+            print("\n")
+        return meta
+    
+    def _stage_3(self, test_info: dict, test_dir: str, max_instances: int = None):
+        # Getting prompts
+        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
+        
+        # Iterating through instances
+        meta = {t: 0 for t in system.keys()}
+        for t in system.keys():
+            # Setting max tokens
+            self.gpt.config = gpt_mod.GPTConfig(max_tokens=600)
+            
+            # Calculate interval for printing dots
+            loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
+            print(f"  Making {t} stage 3 requests", end="")
+            
+            # Iterative GPT requests
+            system_prompt = system[t]
+            stage_structure = self._valid_structures['3']
+            for i, row in enumerate(user[t], start=1):
+                # Dot loader
+                if i % loader_interval == 0 or i == len(user[t]):
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+                
+                # GPT requests
+                response_dict = self.gpt.gpt_request(
+                    sys = str(system_prompt),
+                    user = str(row),
+                    output_structure = stage_structure
+                )
+                
+                # Writing request info
+                f.write_test(
+                    test_dir=test_dir,
+                    stage='3',
+                    instance_type=t,
+                    system=str(system),
+                    user=row,
+                    window_number=row['window_number'],
+                    response=response_dict['response']
+                )
+                if i == 1:
+                    meta[t] = response_dict['meta']
+                else:
+                    meta[t].usage.completion_tokens += response_dict['meta'].usage.completion_tokens
+                    meta[t].usage.prompt_tokens += response_dict['meta'].usage.prompt_tokens
+                    meta[t].usage.total_tokens += response_dict['meta'].usage.total_tokens
+        return meta
+    
+    # Public methods
     def reset_dir_path(self, dir_path: str) -> None:
         """Reset the main directory path."""
         self.PATH = dir_path
@@ -61,10 +254,9 @@ class IRPD:
         """
         # Valid options
         valid_instances = ['uni', 'uniresp', 'switch', 'first']
-        valid_ras = ['thi', 'eli', 'both', 'exp']
         
         # Validate arguments
-        f._validate_arg([ra], valid_ras, "ras")
+        f._validate_arg([ra], self._valid_ras, "ras")
         f._validate_arg([instance], valid_instances, "instance")
         
         # Creating trimmed data
@@ -93,29 +285,13 @@ class IRPD:
         else:
             ras = ['exp']
             print(f"Note 'ras' defaulted to {ras} since 'stages' include '0'. \n")
-
-        # Valid options
-        valid_stages = ['0', '1', '1r', '1c', '2', '3']
-        valid_instances = ['uni', 'uniresp', 'switch', 'first', 'uni_switch']
-        valid_ras = ['thi', 'eli', 'both', 'exp']
-        valid_treatments = ['noise', 'no_noise', 'merged']
-        valid_types = ['test', 'subtest']
-        valid_kwargs = ['max_instances']
-        valid_structures = {
-            '0': outstr.Stage_0_Structure,
-            '1': outstr.Stage_1_Structure,
-            '1r': outstr.Stage_1r_Structure,
-            '1c': outstr.Stage_1c_Structure,
-            '2': outstr.Stage_2_Structure,
-            '3': outstr.Stage_3_Structure
-        }
         
         # Validate arguments
-        f._validate_arg(stages, valid_stages, "stages")
-        f._validate_arg(ras, valid_ras, "ras")
-        f._validate_arg(treatments, valid_treatments, "treatments")
-        f._validate_arg([instance], valid_instances, "instance")
-        f._validate_arg([test_type], valid_types, "test_type")
+        f._validate_arg(stages, self._valid_stages, "stages")
+        f._validate_arg(ras, self._valid_ras, "ras")
+        f._validate_arg(treatments, self._valid_treatments, "treatments")
+        f._validate_arg([instance], self._valid_instances, "instance")
+        f._validate_arg([test_type], self._valid_types, "test_type")
 
         if (test_type == 'subtest' and (len(ras) > 1 or len(treatments) > 1)):
             raise ValueError(
@@ -126,15 +302,15 @@ class IRPD:
                 f"If multiple ras or treatments specified, stages must contain '0' or '1'. Got: {ras}, {treatments}, and {stages}"
             )
         for key, value in kwargs.items():
-            if key not in valid_kwargs:
-                raise ValueError(f"Invalid argument: '{key}'. Allowed arguments are: {valid_kwargs}.")
+            if key not in self._valid_kwargs:
+                raise ValueError(f"Invalid argument: '{key}'. Allowed arguments are: {self._valid_kwargs}.")
             elif key == 'max_instances':
                 max_instances = value
         
         # Sorting stages, ras, & treatments list
-        stages = sorted(stages, key=valid_stages.index)
-        ras = sorted(ras, key=valid_ras.index)
-        treatments = sorted(treatments, key=valid_treatments.index)
+        stages = sorted(stages, key=self._valid_stages.index)
+        ras = sorted(ras, key=self._valid_ras.index)
+        treatments = sorted(treatments, key=self._valid_treatments.index)
         
         # Getting test directories
         test_dirs = f.get_test_directory(
@@ -158,85 +334,16 @@ class IRPD:
             # Compressed test info
             test_info = dict(instance=instance, ra=ra, treatment=treatment, stage=stage)
             
-            # Getting prompts
-            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
-
-            meta = {t: 0 for t in system.keys()}
-            if stage in ['1', '1r', '1c']:
-                for t in system.keys():
-                    # Setting max tokens
-                    self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
-                    
-                    # GPT requests
-                    response_dict = self.gpt.gpt_request(
-                        sys = str(system[t]),
-                        user = str(user[t]),
-                        output_structure = valid_structures[stage]
-                    )
-
-                    # Writing request info
-                    f.write_test(
-                        test_dir=test_dir,
-                        stage=stage,
-                        instance_type=t,
-                        system=str(system),
-                        user=str(user),
-                        response=response_dict['response']
-                    )
-                    meta[t] = response_dict['meta']
-                    
-                    print(f"  Completed {t} instance!" if stage != '1c' else "  Completed instance!")
-                
+            # Running test
+            test_args = (test_info, test_dir)
+            if stage in {'1', '1r'}:
+                meta = getattr(self, self._test_methods[stage])(*test_args)
+            else:
+                meta = getattr(self, self._test_methods[stage])(*test_args, max_instances=max_instances)
+            if stage in {'1', '1r'}:
                 f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
-            elif stage in ['0', '2', '3']:
-                for t in system.keys():
-                    # Setting max tokens
-                    self.gpt.config = gpt_mod.GPTConfig(max_tokens=600)
-                    
-                    # Calculate interval for printing dots
-                    loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
-                    print(f"  Making {t} stage {stage} requests", end="")
-                    
-                    # Iterative GPT requests
-                    system_prompt = system[t]
-                    stage_structure = valid_structures[stage]
-                    for i, row in enumerate(user[t].itertuples(index=False) if stage != '3' else user[t], start=1):
-                        
-                        # Dot loader
-                        if i % loader_interval == 0 or i == len(user[t]):
-                            sys.stdout.write(".")
-                            sys.stdout.flush()
-                        
-                        # GPT requests
-                        response_dict = self.gpt.gpt_request(
-                            sys = str(system_prompt),
-                            user = str(row),
-                            output_structure = stage_structure
-                        )
-                        
-                        # Writing request info
-                        f.write_test(
-                            test_dir=test_dir,
-                            stage=stage,
-                            instance_type=t,
-                            system=str(system),
-                            user=row,
-                            window_number=row['window_number'] if isinstance(row, dict) else row.window_number,
-                            response=response_dict['response']
-                        )
-                        if i == 1:
-                            meta[t] = response_dict['meta']
-                        else:
-                            meta[t].usage.completion_tokens += response_dict['meta'].usage.completion_tokens
-                            meta[t].usage.prompt_tokens += response_dict['meta'].usage.prompt_tokens
-                            meta[t].usage.total_tokens += response_dict['meta'].usage.total_tokens
-                        
-                    print(f"\n  Completed {t} instance!")
-                print("  Aggregating responses and making dataframe...")
+            elif stage in {'0', '2', '3'}:
                 f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
-                
-            # Writing test information to the specified directory
             f.write_test_info(meta=meta, test_dir=test_dir, model_info=self.gpt.config, data_file=test_info, stage=stage)
             print(f"  Stage {stage} complete!")
         
