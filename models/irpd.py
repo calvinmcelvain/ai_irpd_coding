@@ -157,7 +157,7 @@ class IRPD:
             # Iterative GPT requests
             system_prompt = system[t]
             stage_structure = self._valid_structures['2']
-            for i, row in enumerate(user[t].itertuples(index=False), start=1):
+            for i, row in enumerate(user[t].to_dict(orient='records'), start=1):
                 # Dot loader
                 if i % loader_interval == 0 or i == len(user[t]):
                     sys.stdout.write(".")
