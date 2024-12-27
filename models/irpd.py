@@ -337,13 +337,12 @@ class IRPD:
             
             # Running test
             test_args = (test_info, test_dir)
-            if stage in {'1', '1r'}:
+            if stage in {'1', '1r', '1c'}:
                 meta = getattr(self, self._test_methods[stage])(*test_args)
+                if stage != '1c':
+                    f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
             else:
                 meta = getattr(self, self._test_methods[stage])(*test_args, max_instances=max_instances)
-            if stage in {'1', '1r'}:
-                f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
-            elif stage in {'0', '2', '3'}:
                 f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
             f.write_test_info(meta=meta, test_dir=test_dir, model_info=self.gpt.config, data_file=test_info, stage=stage)
             print(f"  Stage {stage} complete!")
