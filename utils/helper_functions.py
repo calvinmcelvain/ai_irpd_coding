@@ -142,28 +142,37 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
     # Getting instance types for instance stages
     instance_types = get_instance_types(instance=instance)
     
-    # Stages that are instance dependent or previous output dependent
-    instance_stages = {'0', '1', '1r', '2', '3'}
-    output_stages = {'2', '3'}
-    
-    if stage in instance_stages:
-        # Standard markdown prompt for stages that are instance dependent (rely on instance types)
+    if stage in {'0', '1', '1r', '2', '3'}:
         markdown_prompts = {
             t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md") 
             for t in instance_types
-            }
+        }
         
         # For stages 2 & 3, need to add categories to system prompt
-        if stage in output_stages:
-            output = {t: json_to_output(instance=instance, test_dir=test_path, stage=stage)[t] for t in instance_types}
+        if stage in {'2', '3'}:
+            output = {
+                t: json_to_output(instance=instance, test_dir=test_path, stage=stage)[t] 
+                for t in instance_types
+            }
             system_prompts = {
-                t: markdown_prompts[t] + output[t] for t in instance_types
-                }
+                t: markdown_prompts[t] + output[t] 
+                for t in instance_types
+            }
+        elif stage == '1':
+            system_prompts = {
+                t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md") 
+                for t in instance_types
+            }
         else:
-            system_prompts = markdown_prompts
-    # For Stage 1c, it is not instance dependent
-    else:
-        system_prompts = {'na': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")}
+            system_prompts = {
+            t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md") 
+            for t in instance_types
+        }
+    elif stage == '1c':
+        system_prompts = {
+            '1': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md"), 
+            '1r': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
+        }
     
     return system_prompts
 
