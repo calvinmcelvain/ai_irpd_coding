@@ -47,7 +47,7 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
     
     if test_type != 'vartest':
-        is_new_test = any(s in {'0', '1', '1c'} for s in stage)
+        is_new_test = any(s in {'0', '1'} for s in stage)
     
     if test_type == 'test':
         # Construct the instance directory path
@@ -169,7 +169,8 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
             }
     elif stage == '1c':
         system_prompts = {
-            '1c': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
+            '1c_1': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1c_{treatment}.md"),
+            '1c_2': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
         }
     
     return system_prompts
@@ -203,13 +204,19 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
                 df = df[:max_instances] if max_instances is not None else df
                 user_prompts[t] = df
     elif stage == '1c':
-        new_dfs = {}
-        for t in instance_types:
-            df = data_frames[t]
-            df['instance_type'] = 1 if t == instance_types[0] else 0
-            new_dfs[t] = df
-        df = pd.concat([new_dfs[t] for t in instance_types], ignore_index=True)
-        user_prompts = {'1c': df.to_dict('records')}
+        part_1_exists = os.path.isdir(os.path.join(test_dir, "raw/stage_1c/part_1"))
+        # Part 1
+        if not part_1_exists:
+            new_dfs = {}
+            for t in instance_types:
+                df = data_frames[t]
+                df['instance_type'] = 1 if t == instance_types[0] else 0
+                new_dfs[t] = df
+            df = pd.concat([new_dfs[t] for t in instance_types], ignore_index=True)
+            user_prompts = {'1c_1': df.to_dict('records')}
+        # Part 2
+        else:
+            user_prompts = {'1c_2': json_to_output(test_dir=test_dir, instance=instance, stage=stage)}
     elif stage == '1r':
         user_prompts = json_to_output(test_dir=test_dir, instance=instance, stage=stage)
     # Stage 3 user prompts are the responses of stage 2
@@ -240,8 +247,9 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
     # Stage existince
     stage_1_exists = os.path.isdir(os.path.join(raw_dir, f"stage_1_{instance_types[0]}"))
     stage_1r_exists = os.path.isdir(os.path.join(raw_dir, f"stage_1r_{instance_types[0]}"))
-    stage_1c_exists = os.path.isdir(os.path.join(raw_dir, "stage_1c"))
-    if not (stage_1r_exists or stage_1c_exists or stage_1_exists):
+    stage_1c_1_exists = os.path.isdir(os.path.join(raw_dir, "stage_1c", "part_1"))
+    stage_1c_2_exists = os.path.isdir(os.path.join(raw_dir, "stage_1c", "part_2"))
+    if not (stage_1r_exists or stage_1_exists):
         raise FileExistsError(f"Stage1, Stage 1r, and/or Stage 1c does not exist in {test_dir}")
     
     # Load stage 1 responses
@@ -259,7 +267,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
         initial = {t: '' for t in instance_types}
     
     # Handle different stages
-    if (stage == '1' and output_format != 'prompt') or (stage == '1r' and output_format == 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not (stage_1c_exists and stage_1r_exists)):
+    if (stage == '1' and output_format != 'prompt') or (stage == '1r' and output_format == 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not (stage_1r_exists)):
         for t in instance_types:
             categories = stage_1[t]['categories']
             formatted = _format_categories(categories, initial_text=f"\n\n ## {t.capitalize()} Categories \n\n")
@@ -269,8 +277,39 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                 initial[t] = formatted
         if output_format == "pdf":
             text += ''.join(initial.values())
-    
-    elif (stage == '1r' and output_format != 'prompt') or (stage == '1c' and output_format == 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not stage_1c_exists):
+    elif (stage == '1c' and output_format == 'prompt' and not stage_1c_2_exists):
+        stage_1c_1 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_1/t{test_num}_stg_1c_1_response.txt")))
+        categories = stage_1c_1['categories']
+        formatted = _format_categories(categories, initial_text=f"\n\n ## Categories \n\n")
+        output = formatted
+    elif (stage == '1c' and output_format != 'prompt' and (stage_1c_2_exists and stage_1r_exists)) or (stage in {'2', '3'} and output_format == 'prompt' and stage_1c_2_exists):
+        stage_1c_1 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_1/t{test_num}_stg_1c_1_response.txt")))
+        stage_1c_2 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_2/t{test_num}_stg_1c_2_response.txt")))
+        initial_categories = stage_1c_1['categories']
+        valid_unified_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1c_2['final_categories']}
+        unified_categories = [cat for cat in initial_categories if valid_unified_categories.get(cat['category_name'], False)]
+        unified_categoried_formatted = _format_categories(unified_categories, initial_text="\n\n ## Unified Categories \n\n")
+        
+        stage_1r = {
+        t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
+        for t in instance_types
+        }
+        for t in instance_types:
+            final_categories = []
+            valid_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1r[t]['final_categories']}
+            for category in stage_1[t]['categories']:
+                if valid_categories.get(category['category_name'], False) and category['category_name'] not in valid_unified_categories:
+                    final_categories.append(category)
+            unique_text = _format_categories(final_categories, initial_text=f"\n\n ## Unique {t.capitalize()} Categories \n\n")
+            if output_format == "prompt":
+                output[t] = unified_categoried_formatted + unique_text
+            else:
+                initial[t] = unique_text
+        
+        if output_format == "pdf":
+            text += unified_categoried_formatted + ''.join(initial.values())
+        
+    elif (stage == '1r' and output_format != 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not stage_1c_2_exists):
         stage_1r = {
             t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
             for t in instance_types
@@ -291,32 +330,6 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
             text += ''.join(initial.values())
         else:
             output = {'na': ''.join(output.values())}
-    
-    elif (stage == '1c' and output_format != 'prompt') or (stage in {'2', '3'} and output_format == 'prompt'):
-        stage_1c = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/t{test_num}_stg_1c_response.txt")))
-        stage_1r = {
-        t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
-        for t in instance_types
-        }
-        
-        unified_categories = stage_1c['unified_categories']
-        merged_categories = {k['category_name'] for i in unified_categories for k in i['categories_merged']}
-        unified_text = _format_categories(unified_categories, initial_text="\n\n ## Unified Categories \n\n")
-        
-        for t in instance_types:
-            final_categories = []
-            valid_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1r[t]['final_categories']}
-            for category in stage_1[t]['categories']:
-                if valid_categories.get(category['category_name'], False) and category['category_name'] not in merged_categories:
-                    final_categories.append(category)
-            unique_text = _format_categories(final_categories, initial_text=f"\n\n ## Unique {t.capitalize()} Categories \n\n")
-            if output_format == "prompt":
-                output[t] = unified_text + unique_text
-            else:
-                initial[t] = unique_text
-        
-        if output_format == "pdf":
-            text += unified_text + ''.join(initial.values())
     
     # Save PDF if required
     if output_format == "pdf":
@@ -368,12 +381,13 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
             write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(prompt_dir, f't{test_num}_{window_number}_user_prmpt.txt'), str(user))
         write_file(os.path.join(response_dir, f't{test_num}_{window_number}_response.txt'), str(response))
-    elif stage == '1c_1':
-        stage_dir = os.path.join(test_dir, "raw", "stage_1c", "part_1")
+    elif stage == '1c':
+        part = 1 if instance_type == '1c_1' else 2
+        stage_dir = os.path.join(test_dir, "raw", "stage_1c", f"part_{part}")
         os.makedirs(stage_dir, exist_ok=True)
-        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_sys_prmpt.txt'), str(system))
-        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_user_prmpt.txt'), str(user))
-        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_response.txt'), response)
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{part}_sys_prmpt.txt'), str(system))
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{part}_user_prmpt.txt'), str(user))
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{part}_response.txt'), response)
     
 
 
