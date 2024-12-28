@@ -172,7 +172,7 @@ class IRPD:
                     test_dir=test_dir,
                     stage='2',
                     instance_type=t,
-                    system=str(system),
+                    system=str(system[t]),
                     user=row,
                     window_number=row['window_number'] if isinstance(row, dict) else row.window_number,
                     response=response_dict['response']

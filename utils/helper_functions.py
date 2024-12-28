@@ -145,10 +145,7 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
     if stage in {'0', '1', '1r', '2', '3'}:    
         # For stages 2 & 3, need to add categories to system prompt
         if stage in {'2', '3'}:
-            output = {
-                t: json_to_output(instance=instance, test_dir=test_path, stage=stage)[t] 
-                for t in instance_types
-            }
+            output = json_to_output(instance=instance,test_dir=test_path, stage=stage)
             markdown_prompts = {
                 t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md") 
                 for t in instance_types
