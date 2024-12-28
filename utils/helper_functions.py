@@ -151,7 +151,7 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
                 for t in instance_types
             }
             system_prompts = {
-                t: markdown_prompts[t] + output[t] 
+                t: markdown_prompts[t] + '\n' + output[t] 
                 for t in instance_types
             }
         elif stage == '1':
@@ -284,8 +284,9 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
         stage_1c_2 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_2/t{test_num}_stg_1c_2_response.txt")))
         initial_categories = stage_1c_1['categories']
         valid_unified_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1c_2['final_categories']}
-        unified_categories = [cat for cat in initial_categories if valid_unified_categories.get(cat['category_name'], False)]
-        unified_categoried_formatted = _format_categories(unified_categories, initial_text="\n\n ## Unified Categories \n\n")
+        
+        initial_text = "\n\n ## Unified Categories \n\n" if output_format != "prompt" else ''
+        unified_categoried_formatted = _format_categories(initial_categories, valid_unified_categories, initial_text=initial_text)
         
         stage_1r = {
         t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
@@ -297,10 +298,11 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
             for category in stage_1[t]['categories']:
                 if valid_categories.get(category['category_name'], False) and category['category_name'] not in valid_unified_categories:
                     final_categories.append(category)
-            unique_text = _format_categories(final_categories, initial_text=f"\n\n ## Unique {t.capitalize()} Categories \n\n")
             if output_format == "prompt":
-                output[t] = unified_categoried_formatted + unique_text
+                unique_text = _format_categories(final_categories)
+                output[t] = unique_text + unified_categoried_formatted
             else:
+                unique_text = _format_categories(final_categories, initial_text=f"\n\n ## Unique {t.capitalize()} Categories \n\n")
                 initial[t] = unique_text
         
         if output_format == "pdf":
