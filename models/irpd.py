@@ -70,19 +70,10 @@ class IRPD:
     }
     
     # Internal methods
-    def _stage_1(self, test_info: dict, test_dir: str, stage_1c: bool = False):
+    def _stage_1(self, test_dir: str, user: dict, system: dict):
         """
         Stage 1 of IRPD test.
         """
-        # Getting prompts
-        if stage_1c:
-            test_info['stage'] = '1c'
-            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
-        else:
-            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
-        
         # Iterating through instances
         request_info = {t: 0 for t in system.keys()}
         for t in system.keys():
@@ -104,14 +95,10 @@ class IRPD:
             }
         return request_info
     
-    def _stage_1r(self, test_info: dict, test_dir: str):
+    def _stage_1r(self, test_dir: str, user: dict, system: dict):
         """
         Stage 1r of IRPD test.
-        """
-        # Getting prompts
-        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
-        
+        """        
         # Iterating through instances
         request_info = {t: 0 for t in system.keys()}
         for t in system.keys():
@@ -133,23 +120,10 @@ class IRPD:
             }
         return request_info
     
-    def _stage_1c(self, test_info: dict, test_dir: str):
-        # Part 1: Running Stage 1
-        stage_1_info = self._stage_1(test_info, test_dir, stage_1c=True)
-        f.write_test(
-            test_dir=test_dir,
-            stage='1c_1',
-            instance_type=test_info['instance'],
-            system=str(stage_1_info['1c']['sys']),
-            user=str(stage_1_info['1c']['user']),
-            response=stage_1_info['1c']['response']
-        )
+    def _stage_1c(self, test_dir: str, user: dict, system: dict):
+        pass
     
-    def _stage_2(self, test_info: dict, test_dir: str, max_instances: int = None):
-        # Getting prompts
-        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
-        
+    def _stage_2(self, test_dir: str, user: dict, system: dict):
         # Iterating through instances
         meta = {t: 0 for t in system.keys()}
         for t in system.keys():
@@ -195,11 +169,7 @@ class IRPD:
             print("\n")
         return meta
     
-    def _stage_3(self, test_info: dict, test_dir: str, max_instances: int = None):
-        # Getting prompts
-        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
-        
+    def _stage_3(self, test_dir: str, user: dict, system: dict):
         # Iterating through instances
         meta = {t: 0 for t in system.keys()}
         for t in system.keys():
@@ -341,11 +311,14 @@ class IRPD:
             # Compressed test info
             test_info = dict(instance=instance, ra=ra, treatment=treatment, stage=stage)
             
+            # Gathering prompts
+            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+            
             # Running test
-            test_args = (test_info, test_dir)
+            request_info = getattr(self, self._test_methods[stage])(test_dir, user, system)
             if stage in {'1', '1r', '1c'}:
-                request_info = getattr(self, self._test_methods[stage])(*test_args)
-                meta = {t: 0 for t in request_info.keys()}
+                meta = {}
                 for t, response in request_info.items():
                     meta[t] = response['meta']
                     f.write_test(
@@ -358,7 +331,6 @@ class IRPD:
                     )
                 f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
             elif stage in {'2', '3'}:
-                meta = getattr(self, self._test_methods[stage])(*test_args, max_instances=max_instances)
                 f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
             f.write_test_info(meta=meta, test_dir=test_dir, model_info=self.gpt.config, data_file=test_info, stage=stage)
             print(f"  Stage {stage} complete!")
