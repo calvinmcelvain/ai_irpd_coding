@@ -254,7 +254,7 @@ class IRPD:
                 - max_instances (int): Maximum number of instances used in Stage 2 and/or 3.
         """
         # Default values
-        max_instances = None
+        max_instances = kwargs.get('max_instances', None)
         stages = f._ensure_list(stages or ['1', '1r', '1c', '2', '3'])
         treatments = f._ensure_list(treatments or ['noise', 'no_noise', 'merged'])
         if not '0' in stages:
@@ -278,11 +278,6 @@ class IRPD:
             raise ValueError(
                 f"If multiple ras or treatments specified, stages must contain '0' or '1'. Got: {ras}, {treatments}, and {stages}"
             )
-        for key, value in kwargs.items():
-            if key not in self._valid_kwargs:
-                raise ValueError(f"Invalid argument: '{key}'. Allowed arguments are: {self._valid_kwargs}.")
-            elif key == 'max_instances':
-                max_instances = value
         
         # Sorting stages, ras, & treatments list
         stages = sorted(stages, key=self._valid_stages.index)
