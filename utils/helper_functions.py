@@ -346,7 +346,7 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
     test_num = get_test_number(test_dir=test_dir)
     
     # Raw response & prompts
-    if stage != '1c' and not stage in {'2', '3'}:
+    if stage in {'1', '1r'}:
         stage_dir = os.path.join(test_dir, f"raw/stage_{stage}_{instance_type}")
         os.makedirs(stage_dir, exist_ok=True)
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
@@ -362,13 +362,6 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
             write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(prompt_dir, f't{test_num}_{window_number}_user_prmpt.txt'), str(user))
         write_file(os.path.join(response_dir, f't{test_num}_{window_number}_response.txt'), str(response))
-    else:
-        for t in system.keys():
-            stage_dir = os.path.join(test_dir, f"raw/stage_{stage}")
-            os.makedirs(stage_dir, exist_ok=True)
-            write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_sys_prmpt.txt'), str(system[t]))
-            write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_user_prmpt.txt'), str(user[t]))
-            write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_response.txt'), str(response[t]['response']))
     
 
 
