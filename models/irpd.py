@@ -70,13 +70,18 @@ class IRPD:
     }
     
     # Internal methods
-    def _stage_1(self, test_info: dict, test_dir: str):
+    def _stage_1(self, test_info: dict, test_dir: str, stage_1c: bool = False):
         """
         Stage 1 of IRPD test.
         """
         # Getting prompts
-        system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-        user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+        if stage_1c:
+            test_info['stage'] = '1c'
+            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+        else:
+            system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
+            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
         
         # Iterating through instances
         request_info = {t: 0 for t in system.keys()}
@@ -129,7 +134,16 @@ class IRPD:
         return request_info
     
     def _stage_1c(self, test_info: dict, test_dir: str):
-        pass
+        # Part 1: Running Stage 1
+        stage_1_info = self._stage_1(test_info, test_dir, stage_1c=True)
+        f.write_test(
+            test_dir=test_dir,
+            stage='1c_1',
+            instance_type=test_info['instance'],
+            system=str(stage_1_info['1c']['sys']),
+            user=str(stage_1_info['1c']['user']),
+            response=stage_1_info['1c']['response']
+        )
     
     def _stage_2(self, test_info: dict, test_dir: str, max_instances: int = None):
         # Getting prompts
@@ -329,7 +343,7 @@ class IRPD:
             
             # Running test
             test_args = (test_info, test_dir)
-            if stage in {'1', '1r'}:
+            if stage in {'1', '1r', '1c'}:
                 request_info = getattr(self, self._test_methods[stage])(*test_args)
                 meta = {t: 0 for t in request_info.keys()}
                 for t, response in request_info.items():

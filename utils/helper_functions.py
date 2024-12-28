@@ -47,7 +47,7 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
     
     if test_type != 'vartest':
-        is_new_test = '0' in stage or '1' in stage
+        is_new_test = {'0', '1', '1c'} in stage
     
     if test_type == 'test':
         # Construct the instance directory path
@@ -169,8 +169,7 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
             }
     elif stage == '1c':
         system_prompts = {
-            '1': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md"), 
-            '1r': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
+            '1c': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
         }
     
     return system_prompts
@@ -193,7 +192,7 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
         df['window_number'] = df['window_number'].astype(int)
     
     # If stage is 0, 1, or 2, user prompt is the summary data/experimental data (Stage 0)
-    if stage in ['0', '1', '2']:
+    if stage in {'0', '1', '2'}:
         user_prompts = {t: '' for t in instance_types}
         for t in instance_types:
             df = data_frames[t]
@@ -203,8 +202,15 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
             else:
                 df = df[:max_instances] if max_instances is not None else df
                 user_prompts[t] = df
-    # Stage 1r and 1c user prompts are the responses of stage 1/1r
-    elif stage in ['1r', '1c']:
+    elif stage == '1c':
+        new_dfs = {}
+        for t in instance_types:
+            df = data_frames[t]
+            df['instance_type'] = 1 if t == instance_types[0] else 0
+            new_dfs[t] = df
+        df = pd.concat([new_dfs[t] for t in instance_types], ignore_index=True)
+        user_prompts = {'1c': df.to_dict('records')}
+    elif stage == '1r':
         user_prompts = json_to_output(test_dir=test_dir, instance=instance, stage=stage)
     # Stage 3 user prompts are the responses of stage 2
     else:
@@ -347,13 +353,13 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
     
     # Raw response & prompts
     if stage in {'1', '1r'}:
-        stage_dir = os.path.join(test_dir, f"raw/stage_{stage}_{instance_type}")
+        stage_dir = os.path.join(test_dir, "raw", f"stage_{stage}_{instance_type}")
         os.makedirs(stage_dir, exist_ok=True)
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_user_prmpt.txt'), str(user))
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_response.txt'), str(response))
     elif stage in {'2', '3'}:
-        stage_dir = os.path.join(test_dir, f"raw/stage_{stage}_{instance_type}")
+        stage_dir = os.path.join(test_dir, "raw", f"stage_{stage}_{instance_type}")
         response_dir = os.path.join(stage_dir, "responses")
         prompt_dir = os.path.join(stage_dir, "prompts")
         os.makedirs(response_dir, exist_ok=True)
@@ -362,6 +368,12 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
             write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(prompt_dir, f't{test_num}_{window_number}_user_prmpt.txt'), str(user))
         write_file(os.path.join(response_dir, f't{test_num}_{window_number}_response.txt'), str(response))
+    elif stage == '1c_1':
+        stage_dir = os.path.join(test_dir, "raw", "stage_1c", "part_1")
+        os.makedirs(stage_dir, exist_ok=True)
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_sys_prmpt.txt'), str(system))
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_user_prmpt.txt'), str(user))
+        write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_response.txt'), response)
     
 
 
