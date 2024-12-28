@@ -79,7 +79,7 @@ class IRPD:
         user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
         
         # Iterating through instances
-        request_info = {t: 0 for t in system.keys()}
+        meta = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
             self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
@@ -91,13 +91,17 @@ class IRPD:
                 output_structure = self._valid_structures['1']
             )
 
-            request_info[t] = {
-                'sys': system[t], 
-                'user': user[t], 
-                'response': response_dict['response'], 
-                'meta': response_dict['meta']
-            }
-        return request_info
+            # Writing request info
+            f.write_test(
+                test_dir=test_dir,
+                stage='1',
+                instance_type=t,
+                system=str(system),
+                user=str(user),
+                response=response_dict['response']
+            )
+            meta[t] = response_dict['meta']
+        return meta
     
     def _stage_1r(self, test_info: dict, test_dir: str):
         """
@@ -108,7 +112,7 @@ class IRPD:
         user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
         
         # Iterating through instances
-        request_info = {t: 0 for t in system.keys()}
+        meta = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
             self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
@@ -120,13 +124,17 @@ class IRPD:
                 output_structure = self._valid_structures['1r']
             )
 
-            request_info[t] = {
-                'sys': system[t], 
-                'user': user[t], 
-                'response': response_dict['response'], 
-                'meta': response_dict['meta']
-            }
-        return request_info
+            # Writing request info
+            f.write_test(
+                test_dir=test_dir,
+                stage='1r',
+                instance_type=t,
+                system=str(system),
+                user=str(user),
+                response=response_dict['response']
+            )
+            meta[t] = response_dict['meta']
+        return meta
     
     def _stage_1c(self, test_info: dict, test_dir: str):
         pass
@@ -329,21 +337,11 @@ class IRPD:
             
             # Running test
             test_args = (test_info, test_dir)
-            if stage in {'1', '1r'}:
-                request_info = getattr(self, self._test_methods[stage])(*test_args)
-                meta = {t: 0 for t in request_info.keys()}
-                for t, response in request_info.items():
-                    meta[t] = response['meta']
-                    f.write_test(
-                        test_dir=test_dir,
-                        stage=stage,
-                        instance_type=t,
-                        system=str(response['sys']),
-                        user=str(response['user']),
-                        response=response['response']
-                    )
-                f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
-            elif stage in {'2', '3'}:
+            if stage in {'1', '1r', '1c'}:
+                meta = getattr(self, self._test_methods[stage])(*test_args)
+                if stage != '1c':
+                    f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
+            else:
                 meta = getattr(self, self._test_methods[stage])(*test_args, max_instances=max_instances)
                 f.build_gpt_output(test_dir=test_dir, main_dir=self.PATH, **test_info, max_instances=max_instances)
             f.write_test_info(meta=meta, test_dir=test_dir, model_info=self.gpt.config, data_file=test_info, stage=stage)
