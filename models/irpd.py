@@ -308,7 +308,7 @@ class IRPD:
             
             # Gathering prompts
             system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
-            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
+            user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
             
             # Running test
             request_info = getattr(self, self._test_methods[stage])(test_dir, user, system)
