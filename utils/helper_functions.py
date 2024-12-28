@@ -47,7 +47,7 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
     
     if test_type != 'vartest':
-        is_new_test = {'0', '1', '1c'} in stage
+        is_new_test = any(s in {'0', '1', '1c'} for s in stage)
     
     if test_type == 'test':
         # Construct the instance directory path
