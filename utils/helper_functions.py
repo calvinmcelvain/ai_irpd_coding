@@ -117,37 +117,25 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
     """
     Gets and returns dictionary of system prompts.
     """
-    # Getting instance types for instance stages
     instance_types = get_instance_types(instance=instance)
-    
-    if stage in {'0', '1', '1r', '2', '3'}:    
-        # For stages 2 & 3, need to add categories to system prompt
+    system_prompts = {}
+
+    if stage in {'0', '1', '1r', '2', '3'}:
         if stage in {'2', '3'}:
-            output = json_to_output(instance=instance,test_dir=test_path, stage=stage)
-            markdown_prompts = {
-                t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md") 
-                for t in instance_types
-            }
-            system_prompts = {
-                t: markdown_prompts[t] + '\n' + output[t] 
-                for t in instance_types
-            }
-        elif stage == '1':
-            system_prompts = {
-                t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md") 
-                for t in instance_types
-            }
+            output = json_to_output(instance=instance, test_dir=test_path, stage=stage)
+            for t in instance_types:
+                markdown_prompt = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
+                system_prompts[t] = f"{markdown_prompt}\n{output[t]}"
         else:
-            system_prompts = {
-                t: file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md") 
-                for t in instance_types
-            }
+            for t in instance_types:
+                if stage == '1':
+                    system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md")
+                else:
+                    system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
     elif stage == '1c':
-        system_prompts = {
-            '1c_1': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1c_{treatment}.md"),
-            '1c_2': file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
-        }
-    
+        system_prompts['1c_1'] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1c_{treatment}.md")
+        system_prompts['1c_2'] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
+
     return system_prompts
 
 
@@ -306,7 +294,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
         if output_format == "pdf":
             text += ''.join(initial.values())
         else:
-            output = {'na': ''.join(output.values())}
+            output = {t: ''.join(output[t]) for t in instance_types}
     
     # Save PDF if required
     if output_format == "pdf":
