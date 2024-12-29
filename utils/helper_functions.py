@@ -36,74 +36,52 @@ def write_file(file_path: str, file_write):
   Writes files to path
   '''
   with open(file_path, 'w') as file:
-    file.write(file_write)    
+    file.write(file_write)
+
+    
+def get_next_test_number(directory: str, prefix: str) -> int:
+    """
+    Gets next test number.
+    """
+    test_numbers = [
+        int(re.findall(r'\d+', name)[0])
+        for name in os.listdir(directory)
+        if name.startswith(prefix) and re.findall(r'\d+', name)
+    ]
+    return max(test_numbers, default=0) + 1
 
 
 def get_test_directory(output_dir: str, test_type: str, stage: list = None, instance: str = None, ra_num: int = 1, treatment_num: int = 1) -> list[str]:
     """
     Creates test directory path.
     """
-    if (instance is None or stage is None) and test_type != 'vartest':
+    if test_type != 'vartest' and (instance is None or stage is None):
         raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
     
-    if test_type != 'vartest':
-        is_new_test = any(s in {'0', '1'} for s in stage)
+    is_new_test = test_type != 'vartest' and any(s in {'0', '1'} for s in stage)
     
     if test_type == 'test':
-        # Construct the instance directory path
         instance_dir = os.path.join(output_dir, instance)
         os.makedirs(instance_dir, exist_ok=True)
-        
-        # Get existing test numbers
-        test_numbers = [
-            int(re.findall(r'\d+', name)[0])
-            for name in os.listdir(instance_dir)
-            if name.startswith('test_') and re.findall(r'\d+', name)
-        ]
-        
-        # Determine the base test number
-        last_test_num = max(test_numbers, default=0)
-        
-        # Generate test directories for each RA
+        base_test_num = get_next_test_number(instance_dir, 'test_')
         test_dirs = [
-            os.path.join(instance_dir, f"test_{last_test_num + (i if is_new_test else 0)}")
+            os.path.join(instance_dir, f"test_{base_test_num + (i if is_new_test else 0)}")
             for i in range(1, ra_num * treatment_num + 1)
-        ]
-        return test_dirs
-    elif test_type == 'subtest':
-        # Construct the subtest directory path
+        ] * len(stage)
+        return sorted(test_dirs)
+    
+    if test_type == 'subtest':
         subtest_dir = os.path.join(output_dir, '_subtests')
-        os.makedirs(subtest_dir, exist_ok=True) 
-        
-        # Get existing subtest numbers
-        subtest_numbers = [
-            int(name) for name in os.listdir(subtest_dir) if name.isdigit()
-        ]
-        
-        # Determine the subtest directory
-        last_subtest_num = max(subtest_numbers, default=0)
-        subtest_dir = os.path.join(subtest_dir, str(last_subtest_num + (1 if is_new_test else 0)))
-        return [subtest_dir]
-    elif test_type == 'vartest':
-        # Construct the var_tests directory path
-        instance_dir = os.path.join(output_dir, 'var_tests')
-        os.makedirs(instance_dir, exist_ok=True)
-        
-        # Get existing test numbers
-        test_numbers = [
-            int(re.findall(r'\d+', name)[0])
-            for name in os.listdir(instance_dir)
-            if name.startswith('test_') and re.findall(r'\d+', name)
-        ]
-        
-        # Determine the base test number
-        last_test_num = max(test_numbers, default=0)
-        
-        # Generate test directory
-        test_dir = os.path.join(instance_dir, f"test_{last_test_num + 1}")
-        return [test_dir]
-        
-
+        os.makedirs(subtest_dir, exist_ok=True)
+        subtest_num = get_next_test_number(subtest_dir, '')
+        return [os.path.join(subtest_dir, str(subtest_num + (1 if is_new_test else 0)))]
+    
+    if test_type == 'vartest':
+        var_test_dir = os.path.join(output_dir, 'var_tests')
+        os.makedirs(var_test_dir, exist_ok=True)
+        test_num = get_next_test_number(var_test_dir, 'test_')
+        return [os.path.join(var_test_dir, f"test_{test_num}")]
+    
     raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
 
 
