@@ -143,58 +143,37 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
     """
     Gets and returns dictionary of user prompts.
     """
-    # Getting instance types for instance stages
     instance_types = get_instance_types(instance=instance)
-    
-    # Read CSV files once and store in a dictionary
     data_frames = {
-        t: pd.read_csv(os.path.join(main_dir, f"data/test/{instance}_{treatment}_{ra}_{t}.csv"))
+        t: pd.read_csv(os.path.join(main_dir, f"data/test/{instance}_{treatment}_{ra}_{t}.csv")).astype({'window_number': int})
         for t in instance_types
     }
-    for t in instance_types:
-        df = data_frames[t]
-        df['window_number'] = df['window_number'].astype(int)
-    
-    # If stage is 0, 1, or 2, user prompt is the summary data/experimental data (Stage 0)
+
     if stage in {'0', '1', '2'}:
-        user_prompts = {t: '' for t in instance_types}
-        for t in instance_types:
-            df = data_frames[t]
-            # If stage 1, user prompt is dictionary of full df
-            if stage == '1':
-                user_prompts[t] = df.to_dict('records')
-            else:
-                df = df[:max_instances] if max_instances is not None else df
-                user_prompts[t] = df
+        user_prompts = {t: df[:max_instances].to_dict('records') if max_instances else df.to_dict('records') for t, df in data_frames.items()}
+        if stage != '1':
+            user_prompts = {t: df[:max_instances] if max_instances else df for t, df in data_frames.items()}
     elif stage == '1c':
         part_1_exists = os.path.isdir(os.path.join(test_dir, "raw/stage_1c/part_1"))
-        # Part 1
         if not part_1_exists:
-            new_dfs = {}
-            for t in instance_types:
-                df = data_frames[t]
-                df['instance_type'] = 1 if t == instance_types[0] else 0
-                new_dfs[t] = df
-            df = pd.concat([new_dfs[t] for t in instance_types], ignore_index=True)
-            user_prompts = {'1c_1': df.to_dict('records')}
-        # Part 2
+            combined_df = pd.concat([df.assign(instance_type=(1 if t == instance_types[0] else 0)) for t, df in data_frames.items()], ignore_index=True)
+            user_prompts = {'1c_1': combined_df.to_dict('records')}
         else:
             user_prompts = {'1c_2': json_to_output(test_dir=test_dir, instance=instance, stage=stage)}
     elif stage == '1r':
         user_prompts = json_to_output(test_dir=test_dir, instance=instance, stage=stage)
-    # Stage 3 user prompts are the responses of stage 2
     else:
         user_prompts = {t: [] for t in instance_types}
         for t in instance_types:
-            df = data_frames[t]
-            df = df[:max_instances] if max_instances is not None else df
-            for file in os.listdir(os.path.join(test_dir, f"raw/stage_2_{t}/responses")):
+            df = data_frames[t][:max_instances] if max_instances else data_frames[t]
+            response_dir = os.path.join(test_dir, f"raw/stage_2_{t}/responses")
+            for file in os.listdir(response_dir):
                 if file.endswith("response.txt"):
-                    json_response = json.loads(file_to_string(os.path.join(test_dir, f"raw/stage_2_{t}/responses/{file}")))
-                    summary = df[df['window_number'] == int(json_response['window_number'])].to_dict('records')
-                    summary[0]['assigned_categories'] = json_response['assigned_categories']
-                    user_prompts[t].append(summary[0])
-        
+                    json_response = json.loads(file_to_string(os.path.join(response_dir, file)))
+                    summary = df[df['window_number'] == int(json_response['window_number'])].to_dict('records')[0]
+                    summary['assigned_categories'] = json_response['assigned_categories']
+                    user_prompts[t].append(summary)
+
     return user_prompts
         
 
