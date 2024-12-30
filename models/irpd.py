@@ -71,7 +71,7 @@ class IRPD:
     }
     
     # Internal methods
-    def _stage_1(self, test_dir: str, user: dict, system: dict):
+    def _stage_1(self, user: dict, system: dict):
         """
         Stage 1 of IRPD test.
         """
@@ -96,7 +96,7 @@ class IRPD:
             }
         return request_info
     
-    def _stage_1r(self, test_dir: str, user: dict, system: dict):
+    def _stage_1r(self, user: dict, system: dict):
         """
         Stage 1r of IRPD test.
         """        
@@ -330,7 +330,10 @@ class IRPD:
             
             # Running test
             if stage != '1c':
-                request_info = getattr(self, self._test_methods[stage])(test_dir, user, system)
+                if stage not in {'2', '3'}:
+                    request_info = getattr(self, self._test_methods[stage])(user, system)
+                else:
+                    request_info = getattr(self, self._test_methods[stage])(test_dir, user, system)
             else:
                 request_info = getattr(self, self._test_methods[stage])(test_dir, user, system, test_info)
             if stage in {'1', '1r', '1c'}:
