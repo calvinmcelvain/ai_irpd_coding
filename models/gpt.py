@@ -106,6 +106,7 @@ class GPT:
                 }
             except Exception as e:
                 logging.error(f"Error on attempt {retries + 1}: {e}")
+                retries += 1
                 time.sleep(2.0)
                 time.sleep(r.uniform(0.5, 2.0))
 
