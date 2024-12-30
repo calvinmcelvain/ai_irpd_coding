@@ -311,7 +311,7 @@ def _format_categories(categories: list, valid_categories: dict | None = None, i
     return formatted_text
 
 
-def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user: dict, response: dict, window_number: str = None):
+def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user: dict, response: dict, window_number: str = None) -> None:
     """
     Writes the raw prompts & outputs for tests.
     """
@@ -324,7 +324,8 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_user_prmpt.txt'), str(user))
         write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_response.txt'), str(response))
-    elif stage in {'2', '3'}:
+    
+    if stage in {'2', '3'}:
         stage_dir = os.path.join(test_dir, "raw", f"stage_{stage}_{instance_type}")
         response_dir = os.path.join(stage_dir, "responses")
         prompt_dir = os.path.join(stage_dir, "prompts")
@@ -334,7 +335,8 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
             write_file(os.path.join(stage_dir, f't{test_num}_stg_{stage}_{instance_type}_sys_prmpt.txt'), str(system))
         write_file(os.path.join(prompt_dir, f't{test_num}_{window_number}_user_prmpt.txt'), str(user))
         write_file(os.path.join(response_dir, f't{test_num}_{window_number}_response.txt'), str(response))
-    elif stage == '1c':
+    
+    if stage in {'1c'}:
         part = 1 if instance_type == '1c_1' else 2
         stage_dir = os.path.join(test_dir, "raw", "stage_1c", f"part_{part}")
         os.makedirs(stage_dir, exist_ok=True)
@@ -344,7 +346,7 @@ def write_test(test_dir: str, stage: str, instance_type: str, system: dict, user
     
 
 
-def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: dict, stage: str):
+def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: dict, stage: str) -> None:
     """
     Writes test info.
     """
@@ -394,7 +396,10 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
     write_file(file_path=info_dir, file_write=test_info_file)
     
 
-def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None):
+def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None) -> None:
+    """
+    Builds GPT classification output for stages 2 or 3.
+    """
     test_num = get_test_number(test_dir=test_dir)
     test_df = get_user_prompt(instance=instance, ra=ra, treatment=treatment, stage='2', main_dir=main_dir, test_dir=test_dir, max_instances=max_instances)
     
@@ -455,7 +460,7 @@ def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treat
     output_df.to_csv(os.path.join(test_dir, f"t{test_num}_stg_{stage}_final_output.csv"), index=False)
     
 
-def merge_raw_data(instance: str, ra: str, main_dir: str):
+def merge_raw_data(instance: str, ra: str, main_dir: str) -> None:
     '''
     Function that merges the treatments for summary data. Saves to raw folder.
     '''
@@ -490,7 +495,7 @@ def merge_raw_data(instance: str, ra: str, main_dir: str):
     merged_df.to_csv(os.path.join(main_dir, f'data/raw/{instance}_merged_{ra}.csv'), index=False)
 
 
-def test_dfs(instance: str, ra: str, main_dir: str):
+def test_dfs(instance: str, ra: str, main_dir: str) -> None:
     """
     Function that creates test data. Saves to test folder.
     """
