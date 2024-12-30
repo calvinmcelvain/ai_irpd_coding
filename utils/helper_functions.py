@@ -38,6 +38,19 @@ def write_file(file_path: str, file_write):
   with open(file_path, 'w') as file:
     file.write(file_write)
 
+
+def get_test_number(test_dir: str) -> int:
+    """
+    Gets test number.
+    """
+    match = re.search(r'\d+', test_dir)
+    if match:
+        test_number = int(match.group())
+    else:
+        raise ValueError(f"No test number found in directory: {test_dir}")
+    
+    return test_number
+
     
 def get_next_test_number(directory: str, prefix: str) -> int:
     """
@@ -83,19 +96,6 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         return [os.path.join(var_test_dir, f"test_{test_num}")]
     
     raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
-
-
-def get_test_number(test_dir: str) -> int:
-    """
-    Gets test number.
-    """
-    match = re.search(r'\d+', test_dir)
-    if match:
-        test_number = int(match.group())
-    else:
-        raise ValueError(f"No test number found in directory: {test_dir}")
-    
-    return test_number
 
 
 def get_instance_types(instance: str) -> list[str]:
