@@ -63,6 +63,39 @@ def get_next_test_number(directory: str, prefix: str) -> int:
     ]
     return max(test_numbers, default=0) + 1
 
+def load_json(file_path: str) -> dict:
+    """
+    Load a JSON file from a given path.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    except json.JSONDecodeError:
+        raise ValueError(f"Failed to parse JSON: {file_path}")
+
+
+def check_directories(*paths) -> bool:
+    """
+    Check if all given directories exist.
+    """
+    return all(os.path.isdir(path) for path in paths)
+
+
+def get_instance_types(instance: str) -> list[str]:
+    """
+    Returns the list of instance types.
+    """
+    instance_types = []
+    if instance in ['uni', 'uniresp']:
+        instance_types = ['ucoop', 'udef']
+    
+    if instance in ['switch', 'first']:
+        instance_types = ['coop', 'def']
+    
+    return instance_types
+
 
 def get_test_directory(output_dir: str, test_type: str, stage: list = None, instance: str = None, ra_num: int = 1, treatment_num: int = 1) -> list[str]:
     """
@@ -97,20 +130,6 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         return [os.path.join(var_test_dir, f"test_{test_num}")]
     
     raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
-
-
-def get_instance_types(instance: str) -> list[str]:
-    """
-    Returns the list of instance types.
-    """
-    instance_types = []
-    if instance in ['uni', 'uniresp']:
-        instance_types = ['ucoop', 'udef']
-    
-    if instance in ['switch', 'first']:
-        instance_types = ['coop', 'def']
-    
-    return instance_types
 
 
 def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt_path: str, test_path: str) -> dict:
@@ -173,32 +192,12 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
             response_dir = os.path.join(test_dir, f"raw/stage_2_{t}/responses")
             for file in os.listdir(response_dir):
                 if file.endswith("response.txt"):
-                    json_response = json.loads(file_to_string(os.path.join(response_dir, file)))
+                    json_response = load_json(os.path.join(response_dir, file))
                     summary = df[df['window_number'] == int(json_response['window_number'])].to_dict('records')[0]
                     summary['assigned_categories'] = json_response['assigned_categories']
                     user_prompts[t].append(summary)
 
     return user_prompts
-
-
-def load_json(file_path: str) -> dict:
-    """
-    Load a JSON file from a given path.
-    """
-    try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        raise FileNotFoundError(f"File not found: {file_path}")
-    except json.JSONDecodeError:
-        raise ValueError(f"Failed to parse JSON: {file_path}")
-
-
-def check_directories(*paths) -> bool:
-    """
-    Check if all given directories exist.
-    """
-    return all(os.path.isdir(path) for path in paths)
 
 
 def json_to_output(test_dir: str, instance: str, stage: str, output_format: str = "prompt"):
