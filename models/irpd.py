@@ -58,7 +58,6 @@ class IRPD:
         '0': outstr.Stage_0_Structure,
         '1': outstr.Stage_1_Structure,
         '1r': outstr.Stage_1r_Structure,
-        '1c': outstr.Stage_1c_Structure,
         '2': outstr.Stage_2_Structure,
         '3': outstr.Stage_3_Structure
     }

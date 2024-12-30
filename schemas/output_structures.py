@@ -31,19 +31,6 @@ class Stage_1r_Structure(BaseModel):
     final_categories: list[Refinement]
 
 
-# STAGE 1c
-class Merged_Categories(BaseModel):
-    category_name: str
-
-class Unify(BaseModel):
-    category_name: str
-    definition: str
-    categories_merged: list[Merged_Categories]
-
-class Stage_1c_Structure(BaseModel):
-    unified_categories: list[Unify]
-
-
 # STAGE 2
 class Stage_2_Structure(BaseModel):
     window_number: str
