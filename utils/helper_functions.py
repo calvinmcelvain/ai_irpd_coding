@@ -76,7 +76,7 @@ def load_json(file_path: str) -> dict:
         raise ValueError(f"Failed to parse JSON: {file_path}")
 
 
-def check_directories(*paths) -> bool:
+def check_directories(paths: list[str]) -> bool:
     """
     Check if all given directories exist.
     """
@@ -200,110 +200,96 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
     return user_prompts
 
 
-def json_to_output(test_dir: str, instance: str, stage: str, output_format: str = "prompt"):
+def json_to_output(test_dir: str, instance: str, stage: str, output_format: str = "prompt") -> dict[str, str] | None:
     """
     Converts JSON objects to strings or PDFs based on the output format.
     """
-    # Getting test number, instance types, and raw directory
+    # Compute essential paths and variables
     test_num = get_test_number(test_dir=test_dir)
     instance_types = get_instance_types(instance=instance)
     raw_dir = os.path.join(test_dir, 'raw')
-    
-    # Stage existince
-    stage_1_exists = os.path.isdir(os.path.join(raw_dir, f"stage_1_{instance_types[0]}"))
-    stage_1r_exists = os.path.isdir(os.path.join(raw_dir, f"stage_1r_{instance_types[0]}"))
-    stage_1c_1_exists = os.path.isdir(os.path.join(raw_dir, "stage_1c", "part_1"))
-    stage_1c_2_exists = os.path.isdir(os.path.join(raw_dir, "stage_1c", "part_2"))
-    if not (stage_1r_exists or stage_1_exists):
-        raise FileExistsError(f"Stage1, Stage 1r, and/or Stage 1c does not exist in {test_dir}")
-    
-    # Load stage 1 responses
-    stage_1 = {
-        t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1_{t}/t{test_num}_stg_1_{t}_response.txt")))
-        for t in instance_types
-    }
-    
-    # Initialize output variables
+
+    stage_1_dirs = [os.path.join(raw_dir, f"stage_1_{t}") for t in instance_types]
+    stage_1r_dirs = [os.path.join(raw_dir, f"stage_1r_{t}") for t in instance_types]
+    stage_1c_dir = os.path.join(raw_dir, "stage_1c")
+    stage_1c_parts = [os.path.join(stage_1c_dir, f"part_{i}") for i in range(1, 3)]
+
+    # Load stage data
+    if check_directories(stage_1_dirs):
+        stage_1_data = {t: load_json(os.path.join(dir, f"t{test_num}_stg_1_{t}_response.txt")) for t, dir in zip(instance_types, stage_1_dirs)}
+    if check_directories(stage_1r_dirs):
+        stage_1r_data = {t: load_json(os.path.join(dir, f"t{test_num}_stg_1r_{t}_response.txt")) for t, dir in zip(instance_types, stage_1r_dirs)}
+        stage_1r_keep_decision = {t: {cat['category_name']: cat['keep_decision'] for cat in stage_1r_data[t]['final_categories']} for t in instance_types}
+    if check_directories([stage_1c_parts[0]]):
+        stage_1c_1_data = load_json(os.path.join(stage_1c_parts[0], f"t{test_num}_stg_1c_1_response.txt"))
+    if check_directories([stage_1c_parts[1]]):
+        stage_1c_2_data = load_json(os.path.join(stage_1c_parts[1], f"t{test_num}_stg_1c_2_response.txt"))
+        stage_1c_keep_decision = {cat['category_name']: cat['keep_decision'] for cat in stage_1c_2_data['final_categories']}
+
+    # Prepare output
     if output_format == "prompt":
         output = {t: "" for t in instance_types}
-    else:
-        pdf = MarkdownPdf(toc_level=1)
-        text = f"# Stage {stage} Categories\n\n"
-        initial = {t: '' for t in instance_types}
-    
-    # Handle different stages
-    if (stage == '1' and output_format != 'prompt') or (stage == '1r' and output_format == 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not (stage_1r_exists)):
-        for t in instance_types:
-            categories = stage_1[t]['categories']
-            formatted = _format_categories(categories, initial_text=f"\n\n ## {t.capitalize()} Categories \n\n")
-            if output_format == "prompt":
-                output[t] = formatted
-            else:
-                initial[t] = formatted
-        if output_format == "pdf":
-            text += ''.join(initial.values())
-    elif (stage == '1c' and output_format == 'prompt' and not stage_1c_2_exists):
-        stage_1c_1 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_1/t{test_num}_stg_1c_1_response.txt")))
-        categories = stage_1c_1['categories']
-        formatted = _format_categories(categories, initial_text=f"\n\n ## Categories \n\n")
-        output = formatted
-    elif (stage == '1c' and output_format != 'prompt' and (stage_1c_2_exists and stage_1r_exists)) or (stage in {'2', '3'} and output_format == 'prompt' and stage_1c_2_exists):
-        stage_1c_1 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_1/t{test_num}_stg_1c_1_response.txt")))
-        stage_1c_2 = json.loads(file_to_string(os.path.join(raw_dir, f"stage_1c/part_2/t{test_num}_stg_1c_2_response.txt")))
-        initial_categories = stage_1c_1['categories']
-        valid_unified_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1c_2['final_categories']}
-        
-        initial_text = "\n\n ## Unified Categories \n\n" if output_format != "prompt" else ''
-        unified_categoried_formatted = _format_categories(initial_categories, valid_unified_categories, initial_text=initial_text)
-        
-        stage_1r = {
-        t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
-        for t in instance_types
-        }
-        for t in instance_types:
-            final_categories = []
-            valid_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1r[t]['final_categories']}
-            for category in stage_1[t]['categories']:
-                if valid_categories.get(category['category_name'], False) and category['category_name'] not in valid_unified_categories:
-                    final_categories.append(category)
-            if output_format == "prompt":
-                unique_text = _format_categories(final_categories)
-                output[t] = unique_text + unified_categoried_formatted
-            else:
-                unique_text = _format_categories(final_categories, initial_text=f"\n\n ## Unique {t.capitalize()} Categories \n\n")
-                initial[t] = unique_text
-        
-        if output_format == "pdf":
-            text += unified_categoried_formatted + ''.join(initial.values())
-        
-    elif (stage == '1r' and output_format != 'prompt') or (stage in {'2', '3'} and output_format == 'prompt' and not stage_1c_2_exists):
-        stage_1r = {
-            t: json.loads(file_to_string(os.path.join(raw_dir, f"stage_1r_{t}/t{test_num}_stg_1r_{t}_response.txt")))
-            for t in instance_types
-        }
-        for t in instance_types:
-            categories = stage_1[t]['categories']
-            valid_categories = {cat['category_name']: cat['keep_decision'] for cat in stage_1r[t]['final_categories']}
-            formatted = _format_categories(categories, valid_categories, f"\n\n ## {t.capitalize()} Categories \n\n")
-            if output_format == "prompt":
-                output[t] = formatted
-            else:
-                initial[t] = formatted + f"\n\n ## Removed {t.capitalize()} Categories \n\n"
-                for cat in stage_1r[t]['final_categories']:
-                    if not cat['keep_decision']:
-                        initial[t] += f" ### {cat['category_name']} \n\n"
-                        initial[t] += f" **Reasoning**: {cat['reasoning']}\n\n"
-        if output_format == "pdf":
-            text += ''.join(initial.values())
-        else:
-            output = {t: ''.join(output[t]) for t in instance_types}
-    
-    # Save PDF if required
     if output_format == "pdf":
+        text = f"# Stage {stage} Categories\n\n"
+
+    if stage == '1':
+        for t in instance_types:
+            categories = stage_1_data[t]['categories']
+            text += _format_categories(categories, initial_text=f"## {t.capitalize()} Categories\n\n")
+    
+    if stage == '1r':
+        for t in instance_types:
+            categories = stage_1_data[t]['categories']
+            if output_format == "prompt":
+                output[t] += _format_categories(categories)
+            else:
+                text += _format_categories(categories, stage_1r_keep_decision[t], initial_text=f"## Kept {t.capitalize()} Categories\n\n")
+                text += f"## Removed {t.capitalize()} Categories\n\n"
+                for cat in stage_1r_data[t]['final_categories']:
+                    if not stage_1r_keep_decision[t][cat['category_name']]:
+                        text += f"### {cat['category_name']}\n\n"
+                        text += f"**Reasoning**: {cat['reasoning']}\n\n"
+    
+    if stage == '1c':
+        categories = stage_1c_1_data['categories']
+        category_names = {cat['category_name'] for cat in categories}
+        if output_format == 'prompt':
+            output = {'1c_1': _format_categories(categories)}
+        else:
+            text += _format_categories(categories, stage_1c_keep_decision, initial_text="## Unified Categories\n\n")
+            for t in instance_types:
+                stage_1_categories = stage_1_data[t]['categories']
+                valid_categories = []
+                for cat in stage_1_categories:
+                    if stage_1r_keep_decision[t].get(cat['category_name'], False) and cat['category_name'] not in category_names:
+                        valid_categories.append(cat)
+                text += _format_categories(valid_categories, initial_text=f"## {t.capitalize()} Categories\n\n")
+    
+    if stage == '2':
+        if check_directories(stage_1r_dirs):
+            if check_directories(stage_1c_parts):
+                stage_1c_categories = stage_1c_1_data['categories']
+                stage_1c_category_names = {cat['category_name'] for cat in stage_1c_categories}
+                for t in instance_types:
+                    output[t] += _format_categories(stage_1c_categories, stage_1c_keep_decision)
+                    stage_1_categories = stage_1_data[t]['categories']
+                    valid_categories = []
+                    for cat in stage_1_categories:
+                        if stage_1r_keep_decision[t].get(cat['category_name'], False) and cat['category_name'] not in stage_1c_category_names:
+                            valid_categories.append(cat)
+                    output[t] += _format_categories(valid_categories)
+            else:
+                for t in instance_types:
+                    stage_1_categories = stage_1_data[t]['categories']
+                    output[t] += _format_categories(stage_1_categories, stage_1r_keep_decision[t])
+
+    # Save to PDF if necessary
+    if output_format == "pdf":
+        pdf = MarkdownPdf(toc_level=1)
         pdf.add_section(Section(text, toc=False))
         pdf.save(os.path.join(test_dir, f"t{test_num}_stg_{stage}_categories.pdf"))
-        return None  # PDFs don't return text
-    
+        return None
+
     return output
 
 
