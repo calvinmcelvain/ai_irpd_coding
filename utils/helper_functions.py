@@ -7,7 +7,7 @@ from datetime import datetime
 from markdown_pdf import MarkdownPdf, Section
 
 
-def _validate_arg(arg: list[str], valid_values: list[str], name: str):
+def _validate_arg(arg: list[str], valid_values: list[str], name: str) -> None:
     """
     Validate that the argument is within valid values.
     """
@@ -31,7 +31,7 @@ def file_to_string(file_path: str) -> str:
     return str(k)
 
 
-def write_file(file_path: str, file_write):
+def write_file(file_path: str, file_write) -> None:
   '''
   Writes files to path
   '''
@@ -79,8 +79,9 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         base_test_num = get_next_test_number(instance_dir, 'test_')
         test_dirs = [
             os.path.join(instance_dir, f"test_{base_test_num + (i if is_new_test else 0)}")
+            for _ in stage
             for i in range(1, ra_num * treatment_num + 1)
-        ] * len(stage)
+        ]
         return sorted(test_dirs)
     
     if test_type == 'subtest':
@@ -102,14 +103,13 @@ def get_instance_types(instance: str) -> list[str]:
     """
     Returns the list of instance types.
     """
+    instance_types = []
     if instance in ['uni', 'uniresp']:
         instance_types = ['ucoop', 'udef']
-    elif instance in ['switch', 'first']:
+    
+    if instance in ['switch', 'first']:
         instance_types = ['coop', 'def']
-    elif instance == 'uni_switch':
-        instance_types = ['uni_ucoop', 'uni_udef', 'switch_coop', 'switch_def']
-    else:
-        raise ValueError(f"Invalid instance type: {instance}")
+    
     return instance_types
 
 
@@ -120,19 +120,20 @@ def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt
     instance_types = get_instance_types(instance=instance)
     system_prompts = {}
 
-    if stage in {'0', '1', '1r', '2', '3'}:
-        if stage in {'2', '3'}:
-            output = json_to_output(instance=instance, test_dir=test_path, stage=stage)
-            for t in instance_types:
-                markdown_prompt = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
-                system_prompts[t] = f"{markdown_prompt}\n{output[t]}"
-        else:
-            for t in instance_types:
-                if stage == '1':
-                    system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md")
-                else:
-                    system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
-    elif stage == '1c':
+    if stage in {'2', '3'}:
+        output = json_to_output(instance=instance, test_dir=test_path, stage=stage)
+        for t in instance_types:
+            markdown_prompt = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
+            system_prompts[t] = f"{markdown_prompt}\n{output[t]}"
+    
+    if stage in {'0', '1', '1r'}:
+        for t in instance_types:
+            if stage == '1':
+                system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}_{t}.md")
+            else:
+                system_prompts[t] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_{stage}_{treatment}.md")
+    
+    if stage in {'1c'}:
         system_prompts['1c_1'] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1c_{treatment}.md")
         system_prompts['1c_2'] = file_to_string(f"{prompt_path}/{instance}/{ra}/stg_1r_{treatment}.md")
 
@@ -153,16 +154,19 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
         user_prompts = {t: df[:max_instances].to_dict('records') if max_instances else df.to_dict('records') for t, df in data_frames.items()}
         if stage != '1':
             user_prompts = {t: df[:max_instances] if max_instances else df for t, df in data_frames.items()}
-    elif stage == '1c':
+    
+    if stage in {'1c'}:
         part_1_exists = os.path.isdir(os.path.join(test_dir, "raw/stage_1c/part_1"))
         if not part_1_exists:
             combined_df = pd.concat([df.assign(instance_type=(1 if t == instance_types[0] else 0)) for t, df in data_frames.items()], ignore_index=True)
             user_prompts = {'1c_1': combined_df.to_dict('records')}
         else:
             user_prompts = {'1c_2': json_to_output(test_dir=test_dir, instance=instance, stage=stage)}
-    elif stage == '1r':
+    
+    if stage in {'1r'}:
         user_prompts = json_to_output(test_dir=test_dir, instance=instance, stage=stage)
-    else:
+    
+    if stage in {'3'}:
         user_prompts = {t: [] for t in instance_types}
         for t in instance_types:
             df = data_frames[t][:max_instances] if max_instances else data_frames[t]
