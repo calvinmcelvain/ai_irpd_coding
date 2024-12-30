@@ -194,6 +194,13 @@ def load_json(file_path: str) -> dict:
         raise ValueError(f"Failed to parse JSON: {file_path}")
 
 
+def check_directories(*paths) -> bool:
+    """
+    Check if all given directories exist.
+    """
+    return all(os.path.isdir(path) for path in paths)
+
+
 def json_to_output(test_dir: str, instance: str, stage: str, output_format: str = "prompt"):
     """
     Converts JSON objects to strings or PDFs based on the output format.
