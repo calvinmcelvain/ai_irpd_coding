@@ -1,10 +1,19 @@
-import os
+# Packages
+import os, sys
 import re
 import pandas as pd
-import json
+import importlib
+from pydantic import BaseModel
 from itertools import product
 from datetime import datetime
 from markdown_pdf import MarkdownPdf, Section
+
+# Appending src dir. for module import
+sys.path.append(os.path.dirname(os.getcwd()))
+
+# Modules
+import schemas.output_structures as outstr
+importlib.reload(outstr)
 
 
 def _validate_arg(arg: list[str], valid_values: list[str], name: str) -> None:
@@ -62,6 +71,7 @@ def get_next_test_number(directory: str, prefix: str) -> int:
         if name.startswith(prefix) and re.findall(r'\d+', name)
     ]
     return max(test_numbers, default=0) + 1
+
 
 def load_json(file_path: str) -> dict:
     """
