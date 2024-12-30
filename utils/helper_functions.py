@@ -73,16 +73,16 @@ def get_next_test_number(directory: str, prefix: str) -> int:
     return max(test_numbers, default=0) + 1
 
 
-def load_json(file_path: str) -> dict:
+def load_json(file_path: str, json_schema: BaseModel) -> dict:
     """
     Load a JSON file from a given path.
     """
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            return json_schema.model_validate_json(f.read())
     except FileNotFoundError:
         raise FileNotFoundError(f"File not found: {file_path}")
-    except json.JSONDecodeError:
+    except ValueError:
         raise ValueError(f"Failed to parse JSON: {file_path}")
 
 
