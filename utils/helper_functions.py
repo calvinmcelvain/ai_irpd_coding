@@ -226,15 +226,21 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
 
     # Load stage data
     if check_directories(stage_1_dirs):
-        stage_1_data = {t: load_json(os.path.join(dir, f"t{test_num}_stg_1_{t}_response.txt")) for t, dir in zip(instance_types, stage_1_dirs)}
+        stage_1_data = {
+            t: load_json(os.path.join(dir, f"t{test_num}_stg_1_{t}_response.txt"), outstr.Stage_1_Structure) 
+            for t, dir in zip(instance_types, stage_1_dirs)
+        }
     if check_directories(stage_1r_dirs):
-        stage_1r_data = {t: load_json(os.path.join(dir, f"t{test_num}_stg_1r_{t}_response.txt")) for t, dir in zip(instance_types, stage_1r_dirs)}
-        stage_1r_keep_decision = {t: {cat['category_name']: cat['keep_decision'] for cat in stage_1r_data[t]['final_categories']} for t in instance_types}
+        stage_1r_data = {
+            t: load_json(os.path.join(dir, f"t{test_num}_stg_1r_{t}_response.txt"), outstr.Stage_1r_Structure) 
+            for t, dir in zip(instance_types, stage_1r_dirs)
+        }
+        stage_1r_keep_decision = {t: {cat.category_name: cat.keep_decision for cat in stage_1r_data[t].final_categories} for t in instance_types}
     if check_directories([stage_1c_parts[0]]):
-        stage_1c_1_data = load_json(os.path.join(stage_1c_parts[0], f"t{test_num}_stg_1c_1_response.txt"))
+        stage_1c_1_data = load_json(os.path.join(stage_1c_parts[0], f"t{test_num}_stg_1c_1_response.txt"), outstr.Stage_1_Structure)
     if check_directories([stage_1c_parts[1]]):
-        stage_1c_2_data = load_json(os.path.join(stage_1c_parts[1], f"t{test_num}_stg_1c_2_response.txt"))
-        stage_1c_keep_decision = {cat['category_name']: cat['keep_decision'] for cat in stage_1c_2_data['final_categories']}
+        stage_1c_2_data = load_json(os.path.join(stage_1c_parts[1], f"t{test_num}_stg_1c_2_response.txt"), outstr.Stage_1r_Structure)
+        stage_1c_keep_decision = {cat.category_name: cat.keep_decision for cat in stage_1c_2_data.final_categories}
 
     # Prepare output
     if output_format == "prompt":
@@ -244,53 +250,53 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
 
     if stage == '1':
         for t in instance_types:
-            categories = stage_1_data[t]['categories']
+            categories = stage_1_data[t].categories
             text += _format_categories(categories, initial_text=f"## {t.capitalize()} Categories\n\n")
     
     if stage == '1r':
         for t in instance_types:
-            categories = stage_1_data[t]['categories']
+            categories = stage_1_data[t].categories
             if output_format == "prompt":
                 output[t] += _format_categories(categories)
             else:
                 text += _format_categories(categories, stage_1r_keep_decision[t], initial_text=f"## Kept {t.capitalize()} Categories\n\n")
                 text += f"## Removed {t.capitalize()} Categories\n\n"
-                for cat in stage_1r_data[t]['final_categories']:
-                    if not stage_1r_keep_decision[t][cat['category_name']]:
-                        text += f"### {cat['category_name']}\n\n"
-                        text += f"**Reasoning**: {cat['reasoning']}\n\n"
+                for cat in stage_1r_data[t].final_categories:
+                    if not stage_1r_keep_decision[t][cat.category_name]:
+                        text += f"### {cat.category_name}\n\n"
+                        text += f"**Reasoning**: {cat.reasoning}\n\n"
     
     if stage == '1c':
-        categories = stage_1c_1_data['categories']
-        category_names = {cat['category_name'] for cat in categories}
+        categories = stage_1c_1_data.categories
+        category_names = {cat.category_name for cat in categories}
         if output_format == 'prompt':
             output = {'1c_1': _format_categories(categories)}
         else:
             text += _format_categories(categories, stage_1c_keep_decision, initial_text="## Unified Categories\n\n")
             for t in instance_types:
-                stage_1_categories = stage_1_data[t]['categories']
+                stage_1_categories = stage_1_data[t].categories
                 valid_categories = []
                 for cat in stage_1_categories:
-                    if stage_1r_keep_decision[t].get(cat['category_name'], False) and cat['category_name'] not in category_names:
+                    if stage_1r_keep_decision[t].get(cat.category_name, False) and cat.category_name not in category_names:
                         valid_categories.append(cat)
                 text += _format_categories(valid_categories, initial_text=f"## {t.capitalize()} Categories\n\n")
     
     if stage == '2':
         if check_directories(stage_1r_dirs):
             if check_directories(stage_1c_parts):
-                stage_1c_categories = stage_1c_1_data['categories']
-                stage_1c_category_names = {cat['category_name'] for cat in stage_1c_categories}
+                stage_1c_categories = stage_1c_1_data.categories
+                stage_1c_category_names = {cat.category_name for cat in stage_1c_categories}
                 for t in instance_types:
                     output[t] += _format_categories(stage_1c_categories, stage_1c_keep_decision)
-                    stage_1_categories = stage_1_data[t]['categories']
+                    stage_1_categories = stage_1_data[t].categories
                     valid_categories = []
                     for cat in stage_1_categories:
-                        if stage_1r_keep_decision[t].get(cat['category_name'], False) and cat['category_name'] not in stage_1c_category_names:
+                        if stage_1r_keep_decision[t].get(cat.category_name, False) and cat.category_name not in stage_1c_category_names:
                             valid_categories.append(cat)
                     output[t] += _format_categories(valid_categories)
             else:
                 for t in instance_types:
-                    stage_1_categories = stage_1_data[t]['categories']
+                    stage_1_categories = stage_1_data[t].cateogries
                     output[t] += _format_categories(stage_1_categories, stage_1r_keep_decision[t])
 
     # Save to PDF if necessary
@@ -309,13 +315,13 @@ def _format_categories(categories: list, valid_categories: dict | None = None, i
     """
     formatted_text = initial_text
     for category in categories:
-        if valid_categories is None or valid_categories.get(category['category_name'], False):
-            formatted_text += f" ### {category['category_name']} \n\n"
-            formatted_text += f" **Definition**: {category['definition']}\n\n"
+        if valid_categories is None or valid_categories.get(category.category_name, False):
+            formatted_text += f" ### {category.category_name} \n\n"
+            formatted_text += f" **Definition**: {category.definition}\n\n"
             try:
                 formatted_text += f" **Examples**:\n\n"
-                for idx, example in enumerate(category['examples'], start=1):
-                    formatted_text += f" {idx}. Window number: {example['window_number']}, Reasoning: {example['reasoning']}\n\n"
+                for idx, example in enumerate(category.examples, start=1):
+                    formatted_text += f" {idx}. Window number: {example.window_number}, Reasoning: {example.reasoning}\n\n"
             except KeyError:
                 pass
     return formatted_text
@@ -425,19 +431,18 @@ def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treat
         response_dir = response_dirs[t]
         for file in os.listdir(response_dir):
             file_path = os.path.join(response_dir, file)
-            response = file_to_string(file_path=file_path)
-            response_data = json.loads(response)
             
+            response_data = {}
             if stage == '3':
-                for i in response_data['category_ranking']:
-                    response_data[i['category_name']] = i['rank']
-                del response_data['category_ranking']
+                json_data = load_json(file_path, outstr.Stage_3_Structure)
+                for i in json_data.category_ranking:
+                    response_data[i.category_name] = i.rank
             else:
-                for i in response_data['assigned_categories']:
+                json_data = load_json(file_path, outstr.Stage_2_Structure)
+                for i in json_data.assigned_categories:
                     response_data[i] = 1
-                del response_data['assigned_categories']
             
-            response_data['window_number'] = int(response_data['window_number'])
+            response_data['window_number'] = int(json_data.window_number)
             response_list[t].append(response_data)
         
         df = pd.DataFrame.from_records(response_list[t])
