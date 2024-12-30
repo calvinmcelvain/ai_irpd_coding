@@ -179,7 +179,20 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
                     user_prompts[t].append(summary)
 
     return user_prompts
-        
+
+
+def load_json(file_path: str) -> dict:
+    """
+    Load a JSON file from a given path.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise FileNotFoundError(f"File not found: {file_path}")
+    except json.JSONDecodeError:
+        raise ValueError(f"Failed to parse JSON: {file_path}")
+
 
 def json_to_output(test_dir: str, instance: str, stage: str, output_format: str = "prompt"):
     """
