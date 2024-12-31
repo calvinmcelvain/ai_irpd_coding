@@ -122,7 +122,7 @@ class IRPD:
     
     def _stage_1c(self, test_dir: str, user: dict, system: dict, test_info: dict):
         # Part 1
-        part_1 = self._stage_1(test_dir, user, {'1c_1': system['1c_1']})
+        part_1 = self._stage_1( user, {'1c_1': system['1c_1']})
         for t, response in part_1.items():
             f.write_test(
                 test_dir=test_dir,
@@ -135,7 +135,7 @@ class IRPD:
 
         # Part 2
         user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=None)
-        part_2 = self._stage_1r(test_dir, user, {'1c_2': system['1c_2']})
+        part_2 = self._stage_1r(user, {'1c_2': system['1c_2']})
         
         return {'1c_1': part_1['1c_1'], '1c_2': part_2['1c_2']}
         
