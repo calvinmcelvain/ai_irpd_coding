@@ -61,7 +61,7 @@ def get_test_number(test_dir: str) -> int:
     return test_number
 
     
-def get_next_test_number(directory: str, prefix: str) -> int:
+def get_max_test_number(directory: str, prefix: str) -> int:
     """
     Gets next test number.
     """
@@ -70,7 +70,7 @@ def get_next_test_number(directory: str, prefix: str) -> int:
         for name in os.listdir(directory)
         if name.startswith(prefix) and re.findall(r'\d+', name)
     ]
-    return max(test_numbers, default=0) + 1
+    return max(test_numbers, default=0)
 
 
 def load_json(file_path: str, json_schema: BaseModel) -> dict:
@@ -119,7 +119,7 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
     if test_type == 'test':
         instance_dir = os.path.join(output_dir, instance)
         os.makedirs(instance_dir, exist_ok=True)
-        base_test_num = get_next_test_number(instance_dir, 'test_')
+        base_test_num = get_max_test_number(instance_dir, 'test_')
         test_dirs = [
             os.path.join(instance_dir, f"test_{base_test_num + (i if is_new_test else 0)}")
             for _ in stage
@@ -130,13 +130,13 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
     if test_type == 'subtest':
         subtest_dir = os.path.join(output_dir, '_subtests')
         os.makedirs(subtest_dir, exist_ok=True)
-        subtest_num = get_next_test_number(subtest_dir, '')
+        subtest_num = get_max_test_number(subtest_dir, '')
         return [os.path.join(subtest_dir, str(subtest_num + (1 if is_new_test else 0)))]
     
     if test_type == 'vartest':
         var_test_dir = os.path.join(output_dir, 'var_tests')
         os.makedirs(var_test_dir, exist_ok=True)
-        test_num = get_next_test_number(var_test_dir, 'test_')
+        test_num = get_max_test_number(var_test_dir, 'test_')
         return [os.path.join(var_test_dir, f"test_{test_num}")]
     
     raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
