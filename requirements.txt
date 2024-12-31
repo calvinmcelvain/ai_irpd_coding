@@ -1,7 +1,7 @@
-pandas
-numpy
-scikit-learn
-openai
-python-dotenv
-pydantic
-markdown-pdf
+pandas==2.2.2
+numpy==2.0.1
+scikit-learn==1.5.2
+openai==1.58.1
+python-dotenv==1.0.1
+pydantic==2.7.4
+markdown-pdf==1.3
