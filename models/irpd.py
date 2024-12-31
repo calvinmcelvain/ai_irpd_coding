@@ -122,7 +122,7 @@ class IRPD:
     
     def _stage_1c(self, test_dir: str, user: dict, system: dict, test_info: dict):
         # Part 1
-        part_1 = self._stage_1( user, {'1c_1': system['1c_1']})
+        part_1 = self._stage_1(user, {'1c_1': system['1c_1']})
         for t, response in part_1.items():
             f.write_test(
                 test_dir=test_dir,
@@ -172,7 +172,7 @@ class IRPD:
                     test_dir=test_dir,
                     stage='2',
                     instance_type=t,
-                    system=str(system[t]),
+                    system=str(system_prompt),
                     user=row,
                     window_number=row['window_number'] if isinstance(row, dict) else row.window_number,
                     response=response_dict['response']
@@ -218,7 +218,7 @@ class IRPD:
                     test_dir=test_dir,
                     stage='3',
                     instance_type=t,
-                    system=str(system),
+                    system=str(system_prompt),
                     user=row,
                     window_number=row['window_number'],
                     response=response_dict['response']
@@ -246,12 +246,9 @@ class IRPD:
             ras (list[str] | str): The RA or RAs in raw data.
             treatments (list[str] | str): The treatment or treatments in raw data.
         """
-        # Valid options
-        valid_instances = ['uni', 'uniresp', 'switch', 'first']
-        
         # Validate arguments
         f._validate_arg([ra], self._valid_ras, "ras")
-        f._validate_arg([instance], valid_instances, "instance")
+        f._validate_arg([instance], self._valid_instances, "instance")
         
         # Creating trimmed data
         f.merge_raw_data(instance=instance, ra=ra, main_dir=self.PATH)
@@ -327,18 +324,39 @@ class IRPD:
             system = f.get_system_prompt(**test_info, prompt_path=self.PROMPTPATH, test_path=test_dir)
             user = f.get_user_prompt(**test_info, main_dir=self.PATH, test_dir=test_dir, max_instances=max_instances)
             
+            # Defining 'instances' for uni_siwitch instance
+            instances = f.get_instances(instance)
+            
             # Running test
             if stage != '1c':
-                if stage not in {'2', '3'}:
-                    request_info = getattr(self, self._test_methods[stage])(user, system)
-                else:
-                    request_info = getattr(self, self._test_methods[stage])(test_dir, user, system)
+                request_info = {i: 0 for i in instances}
+                meta = {i: 0 for i in instances}
+                for i in instances:
+                    if stage not in {'2', '3'}:
+                        request_info[i] = getattr(self, self._test_methods[stage])(user[i], system[i])
+                    else:
+                        meta[i] = getattr(self, self._test_methods[stage])(test_dir, user[i], system[i])
             else:
                 request_info = getattr(self, self._test_methods[stage])(test_dir, user, system, test_info)
-            if stage in {'1', '1r', '1c'}:
-                meta = {}
+            
+            if stage in {'1', '1r'}:
+                meta = {i: {} for i in instances}
+                for i in instances:
+                    for t, response in request_info[i].items():
+                        meta[i][t] = response['meta']
+                        f.write_test(
+                            test_dir=test_dir,
+                            stage=stage,
+                            instance_type=t,
+                            system=str(response['sys']),
+                            user=str(response['user']),
+                            response=response['response']
+                        )
+                f.json_to_output(test_dir=test_dir, stage=stage, instance=instance, output_format='pdf')
+            elif stage in {'1c'}:
+                meta = {instance: {}}
                 for t, response in request_info.items():
-                    meta[t] = response['meta']
+                    meta[instance][t] = response['meta']
                     f.write_test(
                         test_dir=test_dir,
                         stage=stage,
