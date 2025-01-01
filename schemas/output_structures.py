@@ -22,13 +22,8 @@ class Stage_1_Structure(BaseModel):
 
 
 # STAGE 1r
-class Refinement(BaseModel):
-    category_name: str
-    keep_decision: bool
-    reasoning: str
-
 class Stage_1r_Structure(BaseModel):
-    final_categories: list[Refinement]
+    refined_categories: list[Category]
 
 
 # STAGE 2

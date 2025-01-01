@@ -246,6 +246,9 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
     """
     Converts JSON objects to strings or PDFs based on the output format.
     """
+    # Validate arguments
+    _validate_arg([output_format], ['prompt', 'pdf'], 'output_format')
+    
     # Compute essential paths and variables
     test_num = get_test_number(test_dir=test_dir)
     raw_dir = os.path.join(test_dir, 'raw')
@@ -254,9 +257,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
     
     output = {i: "" for i in instances}
     text = {i: "" for i in instances}
-    stage_1_data_allias = {i: {} for i in instances}
     stage_1r_data_allias = {i: {} for i in instances}
-    stage_1r_keep_allias = {i: {} for i in instances}
     for i in instances:
         instance_types = get_instance_types(instance=i)
 
@@ -271,26 +272,16 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                 t: load_json(os.path.join(dir, f"t{test_num}_stg_1_{t}_response.txt"), outstr.Stage_1_Structure) 
                 for t, dir in zip(instance_types, stage_1_dirs)
             }
-            stage_1_data_allias[i] = stage_1_data
         if check_directories(stage_1r_dirs):
             stage_1r_data = {
                 t: load_json(os.path.join(dir, f"t{test_num}_stg_1r_{t}_response.txt"), outstr.Stage_1r_Structure) 
                 for t, dir in zip(instance_types, stage_1r_dirs)
             }
             stage_1r_data_allias[i] = stage_1r_data
-            stage_1r_keep_decision = {
-                t: {
-                    cat.category_name: cat.keep_decision 
-                    for cat in stage_1r_data[t].final_categories
-                    } 
-                for t in instance_types
-            }
-            stage_1r_keep_allias[i] = stage_1r_keep_decision
         if check_directories([stage_1c_parts[0]]):
             stage_1c_1_data = load_json(os.path.join(stage_1c_parts[0], f"t{test_num}_stg_1c_1_response.txt"), outstr.Stage_1_Structure)
         if check_directories([stage_1c_parts[1]]):
             stage_1c_2_data = load_json(os.path.join(stage_1c_parts[1], f"t{test_num}_stg_1c_2_response.txt"), outstr.Stage_1r_Structure)
-            stage_1c_keep_decision = {cat.category_name: cat.keep_decision for cat in stage_1c_2_data.final_categories}
 
         # Prepare output
         if output_format == "prompt":
@@ -298,59 +289,52 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
         if output_format == "pdf":
             text[i] = f"# Stage {stage} Categories\n\n"
 
-        if stage == '1':
-            for t in instance_types:
-                categories = stage_1_data[t].categories
-                text[i] += _format_categories(categories, initial_text=f"## {t.capitalize()} Categories\n\n")
-        
-        if stage == '1r':
-            for t in instance_types:
-                categories = stage_1_data[t].categories
-                if output_format == "prompt":
-                    output[i][t] += _format_categories(categories)
-                else:
-                    text[i] += _format_categories(categories, stage_1r_keep_decision[t], initial_text=f"## Kept {t.capitalize()} Categories\n\n")
-                    text[i] += f"## Removed {t.capitalize()} Categories\n\n"
-                    for cat in stage_1r_data[t].final_categories:
-                        if not stage_1r_keep_decision[t][cat.category_name]:
-                            text[i] += f"### {cat.category_name}\n\n"
-                            text[i] += f"**Reasoning**: {cat.reasoning}\n\n"
+        if stage in {'1', '1r'}:
+            if output_format == "pdf":
+                for t in instance_types:
+                    categories = stage_1_data[t].categories if stage == '1' else stage_1r_data[t].refined_categories
+                    text[i] += _format_categories(categories, initial_text=f"## {t.capitalize()} Categories\n\n")
+            else:
+                for t in instance_types:
+                    categories = stage_1_data[t].categories
+                    output[i][t] = _format_categories(categories)
         
         if stage in {'2', '3'}:
             if check_directories(stage_1r_dirs):
                 if check_directories(stage_1c_parts):
-                    stage_1c_categories = stage_1c_1_data.categories
+                    stage_1c_categories = stage_1c_2_data.refined_categories
                     stage_1c_category_names = {cat.category_name for cat in stage_1c_categories}
                     for t in instance_types:
-                        output[i][t] += _format_categories(stage_1c_categories, stage_1c_keep_decision)
-                        stage_1_categories = stage_1_data[t].categories
+                        output[i][t] = _format_categories(stage_1c_categories)
+                        stage_1r_categories = stage_1r_data[t].refined_categories
                         valid_categories = []
-                        for cat in stage_1_categories:
-                            if stage_1r_keep_decision[t].get(cat.category_name, False) and cat.category_name not in stage_1c_category_names:
+                        for cat in stage_1r_categories:
+                            if cat.category_name not in stage_1c_category_names:
                                 valid_categories.append(cat)
                         output[i][t] += _format_categories(valid_categories)
                 else:
                     for t in instance_types:
-                        stage_1_categories = stage_1_data[t].categories
-                        output[i][t] += _format_categories(stage_1_categories, stage_1r_keep_decision[t])
+                        stage_1r_categories = stage_1r_data[t].categories
+                        output[i][t] += _format_categories(stage_1r_categories)
     
     if stage == '1c':
-        categories = stage_1c_1_data.categories
-        category_names = {cat.category_name for cat in categories}
         if output_format == 'prompt':
+            categories = stage_1c_1_data.categories
             output = {}
             output = {'1c_2': _format_categories(categories)}
         else:
+            categories = stage_1c_2_data.refined_categories
+            stage_1c_category_names = {cat.category_name for cat in categories}
             text = ""
-            text += _format_categories(categories, stage_1c_keep_decision, initial_text="## Unified Categories\n\n")
+            text += _format_categories(categories, initial_text="## Unified Categories\n\n")
             for i in instances:
                 instance_types = get_instance_types(instance=i)
                 text += f"## *{i.capitalize()} Categories*\n\n"
                 for t in instance_types:
-                    stage_1_categories = stage_1_data_allias[i][t].categories
+                    stage_1r_categories = stage_1r_data_allias[i][t].refined_categories
                     valid_categories = []
-                    for cat in stage_1_categories:
-                        if stage_1r_keep_allias[i][t].get(cat.category_name, False) and cat.category_name not in category_names:
+                    for cat in stage_1r_categories:
+                        if cat.category_name not in stage_1c_category_names:
                             valid_categories.append(cat)
                     text += _format_categories(valid_categories, initial_text=f"## {t.capitalize()} Categories\n\n")
     
@@ -370,21 +354,20 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
     return output
 
 
-def _format_categories(categories: list, valid_categories: dict | None = None, initial_text: str = "") -> str:
+def _format_categories(categories: list, initial_text: str = "") -> str:
     """
     Format category text for prompts.
     """
     formatted_text = initial_text
     for category in categories:
-        if valid_categories is None or valid_categories.get(category.category_name, False):
-            formatted_text += f" ### {category.category_name} \n\n"
-            formatted_text += f" **Definition**: {category.definition}\n\n"
-            try:
-                formatted_text += f" **Examples**:\n\n"
-                for idx, example in enumerate(category.examples, start=1):
-                    formatted_text += f" {idx}. Window number: {example.window_number}, Reasoning: {example.reasoning}\n\n"
-            except KeyError:
-                pass
+        formatted_text += f" ### {category.category_name} \n\n"
+        formatted_text += f" **Definition**: {category.definition}\n\n"
+        try:
+            formatted_text += f" **Examples**:\n\n"
+            for idx, example in enumerate(category.examples, start=1):
+                formatted_text += f" {idx}. Window number: {example.window_number}, Reasoning: {example.reasoning}\n\n"
+        except KeyError:
+            pass
     return formatted_text
 
 
