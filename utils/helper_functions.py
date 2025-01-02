@@ -2,12 +2,15 @@
 import os, sys
 import re
 import pandas as pd
+import numpy as np
 import importlib
 import logging as log
 from pydantic import BaseModel
 from itertools import product
 from datetime import datetime
 from markdown_pdf import MarkdownPdf, Section
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Appending src dir. for module import
 sys.path.append(os.path.dirname(os.getcwd()))
