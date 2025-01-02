@@ -3,6 +3,7 @@ import os, sys
 import re
 import pandas as pd
 import importlib
+import logging as log
 from pydantic import BaseModel
 from itertools import product
 from datetime import datetime
@@ -415,6 +416,9 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
     instances = get_instances(instance)
     first_instance = next(iter(meta))
     first_key = next(iter(meta[first_instance]))
+    if meta[first_instance][first_key] == 0:
+        log.warning("No meta data found. Skipping test info.")
+        return None
     
     test_info_lines = [
         "MODEL INFORMATION:",
