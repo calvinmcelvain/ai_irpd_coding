@@ -85,7 +85,6 @@ def name_similarity(test_responses: list) -> pd.DataFrame:
     return pd.concat(dfs, axis=0, ignore_index=True)
     
 
-
 def definition_similarity(test_responses: list) -> pd.DataFrame:
     """
     Calculates category definition similarity by matching pairs of definitions with the maximum cosine similarity, with respect to the matching scheme.
@@ -97,8 +96,12 @@ def definition_similarity(test_responses: list) -> pd.DataFrame:
         for key in responses.keys():
             definitions_with_ids = []
             for replication_id, replication in enumerate(responses[key]):
-                for category in replication['categories']:
-                    definitions_with_ids.append((replication_id, category['definition']))
+                try:
+                    for category in replication.categories:
+                        definitions_with_ids.append((replication_id, category.definition))
+                except AttributeError:
+                    for category in replication.refined_categories:
+                        definitions_with_ids.append((replication_id, category.definition))
         
             definitions = [item[1] for item in definitions_with_ids]
             replication_ids = [item[0] for item in definitions_with_ids]
@@ -127,6 +130,7 @@ def definition_similarity(test_responses: list) -> pd.DataFrame:
                     })
         dfs.append(pd.DataFrame(data))
     return pd.concat(dfs, axis=0, ignore_index=True)
+
 
 def keep_decision(responses: dict) -> pd.DataFrame:
     """
