@@ -2,12 +2,15 @@
 import os, sys
 import re
 import pandas as pd
+import numpy as np
 import importlib
 import logging as log
 from pydantic import BaseModel
 from itertools import product
 from datetime import datetime
 from markdown_pdf import MarkdownPdf, Section
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Appending src dir. for module import
 sys.path.append(os.path.dirname(os.getcwd()))
@@ -310,7 +313,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                         stage_1r_categories = stage_1r_data[t].refined_categories
                         valid_categories = []
                         for cat in stage_1r_categories:
-                            if cat.category_name not in stage_1c_category_names:
+                            if _category_similarity(cat.category_name, stage_1c_category_names):
                                 valid_categories.append(cat)
                         output[i][t] += _format_categories(valid_categories)
                 else:
@@ -335,7 +338,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                     stage_1r_categories = stage_1r_data_allias[i][t].refined_categories
                     valid_categories = []
                     for cat in stage_1r_categories:
-                        if cat.category_name not in stage_1c_category_names:
+                        if _category_similarity(cat.category_name, stage_1c_category_names):
                             valid_categories.append(cat)
                     text += _format_categories(valid_categories, initial_text=f"## {t.capitalize()} Categories\n\n")
     
@@ -370,6 +373,22 @@ def _format_categories(categories: list, initial_text: str = "") -> str:
         except KeyError:
             pass
     return formatted_text
+
+
+def _category_similarity(category: str, unified_categories: set[str], threshold: float = 0.3) -> bool:
+    """
+    Calculates similarity of category between unified categories. If above cosine similarity threshold, return False.
+    """
+    new_category = category.replace("_", " ")
+    new_unified_categories = []
+    for unified_category in unified_categories:
+        new_unified_categories.append(unified_category.replace("_", " "))
+    
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([new_category] + new_unified_categories)
+    sim_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+    values = sim_matrix[0][1:]
+    return all(value < threshold for value in values)
 
 
 def write_test(test_dir: str, stage: str, instance_type: str, system: str, user: str, response: dict, window_number: str = None) -> None:
