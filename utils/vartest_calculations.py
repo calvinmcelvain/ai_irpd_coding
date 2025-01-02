@@ -27,14 +27,16 @@ def get_responses(vartest_dir: str, test_number: int, instance: str = 'uni'):
     stage = next(folder for folder in os.listdir(test_dir) if folder.startswith('stage'))
     stage_dir = os.path.join(test_dir, stage)
     
+    stage_schemas = {
+        'stage_1': outstr.Stage_1_Structure,
+        'stage_1r': outstr.Stage_1r_Structure,
+    }
+    schema = stage_schemas[stage]
+    
     if stage not in {'stage_2', 'stage_3'}:
-        json_responses = {
-            w: [f.file_to_string(os.path.join(stage_dir, w, file)) 
-                for file in os.listdir(os.path.join(stage_dir, w))] 
-            for w in instance_types
-        }
         responses = {
-            w: [json.loads(json_responses[w][i]) for i in range(len(json_responses[w]))] 
+            w: [f.load_json(os.path.join(stage_dir, w, file), schema) 
+                for file in os.listdir(os.path.join(stage_dir, w))] 
             for w in instance_types
         }
     else:
