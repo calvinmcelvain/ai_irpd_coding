@@ -52,8 +52,11 @@ def name_similarity(responses: dict) -> pd.DataFrame:
     new_values = {key: [] for key in responses.keys()}
     for key, items in responses.items():
         for item in items:
-            combined_cats = " ".join(cat['category_name'] for cat in item['categories'])
-            new_values[key].append(combined_cats)
+            try:
+                category_names = [category.category_name.replace("_", " ") for category in item.categories]
+            except AttributeError:
+                category_names = [category.category_name.replace("_", " ") for category in item.refined_categories]
+            new_values[key].append(" ".join(category_names))
     
     vectorizer = TfidfVectorizer()
     data = []
