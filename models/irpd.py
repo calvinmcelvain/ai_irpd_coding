@@ -15,9 +15,6 @@ sys.path.append(os.path.dirname(os.getcwd()))
 import models.gpt as gpt_mod
 import utils.helper_functions as f
 import schemas.output_structures as outstr
-importlib.reload(f)
-importlib.reload(gpt_mod)
-importlib.reload(outstr)
 
 
 model_configs = {
@@ -37,6 +34,7 @@ class IRPD:
             dir_path (str): Main directory path.
             gpt_model (GPTConfig object, optional): GPT model confgis. Defaults to base.
         """
+        self.reload_modules()
         self.PATH = dir_path
         if gpt_model:
             self.gpt = gpt_mod.GPT.default(config=gpt_model)
@@ -46,6 +44,13 @@ class IRPD:
         self.PROMPTPATH = os.path.join(dir_path, 'prompts')
         for path in [self.PATH, self.OUTPATH, self.PROMPTPATH]:
             os.makedirs(path, exist_ok=True)
+    
+    # Reloading modules
+    def reload_modules(self):
+        """Reload all modules."""
+        importlib.reload(gpt_mod)
+        importlib.reload(f)
+        importlib.reload(outstr)
     
     # Internal variables
     _valid_stages = ['0', '1', '1r', '1c', '2', '3']
