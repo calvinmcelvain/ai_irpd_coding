@@ -3,10 +3,6 @@ import os, sys
 import importlib
 import logging
 from itertools import product
-from dotenv import load_dotenv
-
-# Load configs (GPT api key, etc.)
-load_dotenv(os.path.join(os.path.dirname(os.getcwd()), "config/configs.env"))
 
 # Appending src dir. for module import
 sys.path.append(os.path.dirname(os.getcwd()))
