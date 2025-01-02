@@ -360,10 +360,10 @@ def _format_categories(categories: list, initial_text: str = "") -> str:
     """
     formatted_text = initial_text
     for category in categories:
-        formatted_text += f" ### {category.category_name} \n\n"
-        formatted_text += f" **Definition**: {category.definition}\n\n"
+        formatted_text += f"### {category.category_name} \n\n"
+        formatted_text += f"**Definition**: {category.definition}\n\n"
         try:
-            formatted_text += f" **Examples**:\n\n"
+            formatted_text += f"**Examples**:\n\n"
             for idx, example in enumerate(category.examples, start=1):
                 formatted_text += f" {idx}. Window number: {example.window_number}, Reasoning: {example.reasoning}\n\n"
         except KeyError:
