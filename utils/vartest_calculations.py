@@ -86,44 +86,47 @@ def name_similarity(test_responses: list) -> pd.DataFrame:
     
 
 
-def definition_similarity(responses: dict) -> pd.DataFrame:
+def definition_similarity(test_responses: list) -> pd.DataFrame:
     """
     Calculates category definition similarity by matching pairs of definitions with the maximum cosine similarity, with respect to the matching scheme.
     """
-    data = []
-    for key in responses.keys():
-        definitions_with_ids = []
-        for replication_id, replication in enumerate(responses[key]):
-            for category in replication['categories']:
-                definitions_with_ids.append((replication_id, category['definition']))
-    
-        definitions = [item[1] for item in definitions_with_ids]
-        replication_ids = [item[0] for item in definitions_with_ids]
+    dfs = []
+    for test in range(len(test_responses)):
+        responses = test_responses[test]
+        data = []
+        for key in responses.keys():
+            definitions_with_ids = []
+            for replication_id, replication in enumerate(responses[key]):
+                for category in replication['categories']:
+                    definitions_with_ids.append((replication_id, category['definition']))
         
-        vectorizer = TfidfVectorizer()
-        tfidf_matrix = vectorizer.fit_transform(definitions)
-        similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
-        
-        # EX: (sim_score, rep_id1, rep_id2)
-        similarity_scores = []
-        for i, j in combinations(range(len(definitions)), 2):
-            if replication_ids[i] != replication_ids[j]:
-                similarity_scores.append((similarity_matrix[i, j], i, j))
-        
-        similarity_scores.sort(reverse=True, key=lambda x: x[0])
-        
-        matched = set()
-        for sim, i, j in similarity_scores:
-            if i not in matched and j not in matched:
-                matched.add(i)
-                matched.add(j)
-                data.append({
-                    'instance_type': key,
-                    'similarity': sim
-                })
-    
-    return pd.DataFrame(data)
-
+            definitions = [item[1] for item in definitions_with_ids]
+            replication_ids = [item[0] for item in definitions_with_ids]
+            
+            vectorizer = TfidfVectorizer()
+            tfidf_matrix = vectorizer.fit_transform(definitions)
+            similarity_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+            
+            # EX: (sim_score, rep_id1, rep_id2)
+            similarity_scores = []
+            for i, j in combinations(range(len(definitions)), 2):
+                if replication_ids[i] != replication_ids[j]:
+                    similarity_scores.append((similarity_matrix[i, j], i, j))
+            
+            similarity_scores.sort(reverse=True, key=lambda x: x[0])
+            
+            matched = set()
+            for sim, i, j in similarity_scores:
+                if i not in matched and j not in matched:
+                    matched.add(i)
+                    matched.add(j)
+                    data.append({
+                        'instance_type': key,
+                        'similarity': sim,
+                        'test': test
+                    })
+        dfs.append(pd.DataFrame(data))
+    return pd.concat(dfs, axis=0, ignore_index=True)
 
 def keep_decision(responses: dict) -> pd.DataFrame:
     """
