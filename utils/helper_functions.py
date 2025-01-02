@@ -413,27 +413,29 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
     test_num = get_test_number(test_dir=test_dir)
     instance = data_file['instance']
     instances = get_instances(instance)
-    
-    test_info_file = "MODEL INFORMATION: \n\n"
-    test_info_file += f" Model: {model_info.model} \n"
-    test_info_file += f" Termperature: {model_info.temperature} \n"
-    test_info_file += f" Max-tokens: {model_info.max_tokens} \n"
-    test_info_file += f" Seed: {model_info.seed} \n"
-    test_info_file += f" Top-p: {model_info.top_p} \n"
-    test_info_file += f" Frequency penalty: {model_info.frequency_penalty} \n"
-    test_info_file += f" Presence penalty: {model_info.presence_penalty} \n\n\n"
-    
-    # Initialize a string to store formatted test info content
-    test_info_file += "TEST INFORMATION:\n\n"
-    
-    # Getting test time
     first_instance = next(iter(meta))
     first_key = next(iter(meta[first_instance]))
-    test_info_file += f' Test date/time: {datetime.fromtimestamp(meta[first_instance][first_key].created).strftime('%Y-%m-%d %H:%M:%S')} \n'
-    test_info_file += f' Instance: {instance} \n'
-    test_info_file += f' Summary: {data_file['ra']} \n'
-    test_info_file += f' Treatment: {data_file['treatment']} \n'
-    test_info_file += f' System fingerprint: {meta[first_instance][first_key].system_fingerprint}\n'
+    
+    test_info_lines = [
+        "MODEL INFORMATION:",
+        "",
+        f"Model: {model_info.model}",
+        f"Temperature: {model_info.temperature}",
+        f"Max-tokens: {model_info.max_tokens}",
+        f"Seed: {model_info.seed}",
+        f"Top-p: {model_info.top_p}",
+        f"Frequency penalty: {model_info.frequency_penalty}",
+        f"Presence penalty: {model_info.presence_penalty}",
+        "",
+        "TEST INFORMATION:",
+        "",
+        f"Test date/time: {datetime.fromtimestamp(meta[first_instance][first_key].created).strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Instance: {instance}",
+        f"Summary: {data_file['ra']}",
+        f"Treatment: {data_file['treatment']}",
+        f"System fingerprint: {meta[first_instance][first_key].system_fingerprint}",
+        "",
+    ]
 
     # Loop through each window
     total = {'completion_tokens': 0, 'prompt_tokens': 0, 'total_tokens': 0}
@@ -442,27 +444,35 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
     for i in instances:
         for key, value in meta[i].items():
             if instance == 'uni_switch' and stage not in {'1c'}:
-                test_info_file += f" {i.upper()} {key.upper()} PROMPT USAGE: \n"
+                test_info_lines.append(f"{i.upper()} {key.upper()} PROMPT USAGE:")
             else:
-                test_info_file += f" {key.upper()} PROMPT USAGE: \n"
-            test_info_file += f"   Completion tokens: {value.usage.completion_tokens} \n"
-            test_info_file += f"   Prompt tokens: {value.usage.prompt_tokens} \n"
-            test_info_file += f"   Total tokens: {value.usage.total_tokens} \n"
+                test_info_lines.append(f"{key.upper()} PROMPT USAGE:")
+            test_info_lines.extend([
+                "",
+                f"Completion tokens: {value.usage.completion_tokens}",
+                f"Prompt tokens: {value.usage.prompt_tokens}",
+                f"Total tokens: {value.usage.total_tokens}",
+                "",
+            ])
             total['completion_tokens'] += value.usage.completion_tokens
             total['prompt_tokens'] += value.usage.prompt_tokens
             total['total_tokens'] += value.usage.total_tokens
     
     # Writing totals
-    test_info_file += f" TOTAL PROMPT USAGE: \n"
-    test_info_file += f"   Completion tokens: {total['completion_tokens']} \n"
-    test_info_file += f"   Prompt tokens: {total['prompt_tokens']} \n"
-    test_info_file += f"   Total tokens: {total['total_tokens']} \n"
+    test_info_lines.extend([
+        "TOTAL PROMPT USAGE:",
+        "",
+        f"Completion tokens: {total['completion_tokens']}",
+        f"Prompt tokens: {total['prompt_tokens']}",
+        f"Total tokens: {total['total_tokens']}",
+    ])
 
     # Define the directory and file path for the test info file
-    info_dir = os.path.join(test_dir, f'raw/t{test_num}_stg{stage}_test_info.txt')
+    info_dir = os.path.join(test_dir, "raw", "_test_info", f"t{test_num}_stg{stage}_test_info.txt")
+    os.makedirs(os.path.dirname(info_dir), exist_ok=True)
 
     # Write the formatted test info to the file
-    write_file(file_path=info_dir, file_write=test_info_file)
+    write_file(info_dir, "\n".join(test_info_lines))
     
 
 def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None) -> None:
