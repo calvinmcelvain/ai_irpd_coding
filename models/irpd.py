@@ -320,7 +320,7 @@ class IRPD:
             print(f"Running stage {stage}, {ra}, {treatment}....")
             
             # Getting the correct directory
-            test_dir = test_dirs[(treatments.index(treatment) + ras.index(ra) * len(treatments))]
+            test_dir = test_dirs[(treatments.index(treatment) + ras.index(ra))]
             
             # Compressed test info
             test_info = dict(instance=instance, ra=ra, treatment=treatment, stage=stage)

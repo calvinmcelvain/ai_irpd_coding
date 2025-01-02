@@ -131,7 +131,6 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         base_test_num = get_max_test_number(instance_dir, 'test_')
         test_dirs = [
             os.path.join(instance_dir, f"test_{base_test_num + (i if is_new_test else 0)}")
-            for _ in stage
             for i in range(1, ra_num * treatment_num + 1)
         ]
         return sorted(test_dirs)
