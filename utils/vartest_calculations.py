@@ -45,38 +45,45 @@ def get_responses(vartest_dir: str, test_number: int, instance: str = 'uni'):
     return responses
 
 
-def name_similarity(responses: dict) -> pd.DataFrame:
+def name_similarity(test_responses: list) -> pd.DataFrame:
     """
     Calculating category name similarities.
     """
-    new_values = {key: [] for key in responses.keys()}
-    for key, items in responses.items():
-        for item in items:
-            try:
-                category_names = [category.category_name.replace("_", " ") for category in item.categories]
-            except AttributeError:
-                category_names = [category.category_name.replace("_", " ") for category in item.refined_categories]
-            new_values[key].append(" ".join(category_names))
-    
-    vectorizer = TfidfVectorizer()
-    data = []
-    for key, combined_texts in new_values.items():
-        if len(combined_texts) < 2:
-            continue
+    dfs = []
+    for test in range(len(test_responses)):
+        responses = test_responses[test]
+        new_values = {key: [] for key in responses.keys()}
+        for key, items in responses.items():
+            for item in items:
+                try:
+                    category_names = [category.category_name.replace("_", " ") for category in item.categories]
+                except AttributeError:
+                    category_names = [category.category_name.replace("_", " ") for category in item.refined_categories]
+                new_values[key].append(" ".join(category_names))
+        
+        vectorizer = TfidfVectorizer()
+        data = []
+        for key, combined_texts in new_values.items():
+            if len(combined_texts) < 2:
+                continue
 
-        tfidf_matrix = vectorizer.fit_transform(combined_texts)
-        sim_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+            tfidf_matrix = vectorizer.fit_transform(combined_texts)
+            sim_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+            
+            upper_triangle = np.triu_indices_from(sim_matrix, k=1)
+            upper_triangle_values = sim_matrix[upper_triangle]
+            
+            for sim in upper_triangle_values:
+                data.append({
+                    'instance_type': key,
+                    'similarity': sim,
+                    'test': test
+                })
         
-        upper_triangle = np.triu_indices_from(sim_matrix, k=1)
-        upper_triangle_values = sim_matrix[upper_triangle]
-        
-        for sim in upper_triangle_values:
-            data.append({
-                'instance_type': key,
-                'similarity': sim
-            })
+        dfs.append(pd.DataFrame(data))
     
-    return pd.DataFrame(data)
+    return pd.concat(dfs, axis=0, ignore_index=True)
+    
 
 
 def definition_similarity(responses: dict) -> pd.DataFrame:
