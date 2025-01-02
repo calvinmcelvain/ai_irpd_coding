@@ -375,6 +375,22 @@ def _format_categories(categories: list, initial_text: str = "") -> str:
     return formatted_text
 
 
+def _category_similarity(category: str, unified_categories: set[str], threshold: float = 0.3) -> bool:
+    """
+    Calculates similarity of category between unified categories. If above cosine similarity threshold, return False.
+    """
+    new_category = category.replace("_", " ")
+    new_unified_categories = []
+    for unified_category in unified_categories:
+        new_unified_categories.append(unified_category.replace("_", " "))
+    
+    vectorizer = TfidfVectorizer()
+    tfidf_matrix = vectorizer.fit_transform([new_category] + new_unified_categories)
+    sim_matrix = cosine_similarity(tfidf_matrix, tfidf_matrix)
+    values = sim_matrix[0][1:]
+    return all(value < threshold for value in values)
+
+
 def write_test(test_dir: str, stage: str, instance_type: str, system: str, user: str, response: dict, window_number: str = None) -> None:
     """
     Writes the raw prompts & outputs for tests.
