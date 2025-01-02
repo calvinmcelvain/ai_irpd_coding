@@ -79,7 +79,7 @@ class IRPD:
         request_info = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
-            self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
+            self.gpt.config.max_tokens = 2000
             
             # GPT requests
             response_dict = self.gpt.gpt_request(
@@ -104,7 +104,7 @@ class IRPD:
         request_info = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
-            self.gpt.config = gpt_mod.GPTConfig(max_tokens=2000)
+            self.gpt.config.max_tokens = 2000
             
             # GPT requests
             response_dict = self.gpt.gpt_request(
@@ -146,7 +146,7 @@ class IRPD:
         meta = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
-            self.gpt.config = gpt_mod.GPTConfig(max_tokens=600)
+            self.gpt.config.max_tokens = 600
             
             # Calculate interval for printing dots
             loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
@@ -201,7 +201,7 @@ class IRPD:
         meta = {t: 0 for t in system.keys()}
         for t in system.keys():
             # Setting max tokens
-            self.gpt.config = gpt_mod.GPTConfig(max_tokens=600)
+            self.gpt.config.max_tokens = 600
             
             # Calculate interval for printing dots
             loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
