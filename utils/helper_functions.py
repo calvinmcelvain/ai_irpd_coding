@@ -221,7 +221,8 @@ def get_user_prompt(instance: str, ra: str, treatment: str, stage: str, main_dir
                             json_response = load_json(os.path.join(response_dir, file), outstr.Stage_2_Structure)
                             summary = df[df['window_number'] == int(json_response.window_number)].to_dict('records')[0]
                             summary['assigned_categories'] = json_response.assigned_categories
-                            user_prompts[i][t].append(summary)                
+                            user_prompts[i][t].append(summary)    
+                    user_prompts[i][t] = pd.DataFrame.from_records(user_prompts[i][t])
     else:
         part_1_exists = os.path.isdir(os.path.join(test_dir, "raw/stage_1c/part_1"))
         if not part_1_exists:
@@ -472,7 +473,20 @@ def write_test_info(meta: dict, test_dir: str, model_info: object, data_file: di
 
     # Write the formatted test info to the file
     write_file(info_dir, "\n".join(test_info_lines))
-    
+
+
+def check_completed_requests(test_dir: str, instance_type: str, stage: str) -> list:
+    """
+    Returns the requests already made for stage 2 and 3.
+    """
+    response_dir = os.path.join(test_dir, "raw", f"stage_{stage}_{instance_type}", "responses")
+    if not os.path.exists(response_dir):
+        requests = []
+    else:
+        response_files = sorted([f for f in os.listdir(response_dir) if f.endswith("response.txt")])
+        requests = [int(re.search(r't\d+_(\d+)_response\.txt', file).group(1)) for file in response_files]
+    return requests
+
 
 def build_gpt_output(test_dir: str, main_dir: str, instance: str, ra: str, treatment: str, stage: str, max_instances: int = None) -> None:
     """

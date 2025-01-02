@@ -156,12 +156,21 @@ class IRPD:
             loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
             print(f"  Making {t} stage 2 requests", end="")
             
+            # Checking for requests already made & adjusting user prompt
+            user_df = user[t]
+            past_requests = f.check_completed_requests(
+                test_dir=test_dir, 
+                instance_type=t,
+                stage='2'
+            )
+            user_df = user_df[~user_df['window_number'].isin(past_requests)]
+            
             # Iterative GPT requests
             system_prompt = system[t]
             stage_structure = self._valid_structures['2']
-            for i, row in enumerate(user[t].to_dict(orient='records'), start=1):
+            for i, row in enumerate(user_df.to_dict(orient='records'), start=1):
                 # Dot loader
-                if i % loader_interval == 0 or i == len(user[t]):
+                if i % loader_interval == 0 or i == len(user_df):
                     sys.stdout.write(".")
                     sys.stdout.flush()
                 
@@ -202,12 +211,23 @@ class IRPD:
             loader_interval = len(user[t]) // 10 if len(user[t]) > 10 else 1
             print(f"  Making {t} stage 3 requests", end="")
             
+            # Checking for requests already made & adjusting user prompt
+            user_df = user[t]
+            past_requests = f.check_completed_requests(
+                test_dir=test_dir, 
+                instance_type=t,
+                stage='3'
+            )
+            user_df = user_df[~user_df['window_number'].isin(past_requests)]
+            if len(user_df) == 0:
+                break
+            
             # Iterative GPT requests
             system_prompt = system[t]
             stage_structure = self._valid_structures['3']
-            for i, row in enumerate(user[t], start=1):
+            for i, row in enumerate(user_df.to_dict('records'), start=1):
                 # Dot loader
-                if i % loader_interval == 0 or i == len(user[t]):
+                if i % loader_interval == 0 or i == len(user_df):
                     sys.stdout.write(".")
                     sys.stdout.flush()
                 
