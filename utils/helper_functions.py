@@ -313,7 +313,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                         stage_1r_categories = stage_1r_data[t].refined_categories
                         valid_categories = []
                         for cat in stage_1r_categories:
-                            if cat.category_name not in stage_1c_category_names:
+                            if cat.category_name not in stage_1c_category_names and _category_similarity(cat.category_name, stage_1c_category_names):
                                 valid_categories.append(cat)
                         output[i][t] += _format_categories(valid_categories)
                 else:
@@ -338,7 +338,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
                     stage_1r_categories = stage_1r_data_allias[i][t].refined_categories
                     valid_categories = []
                     for cat in stage_1r_categories:
-                        if cat.category_name not in stage_1c_category_names:
+                        if cat.category_name not in stage_1c_category_names and _category_similarity(cat.category_name, stage_1c_category_names):
                             valid_categories.append(cat)
                     text += _format_categories(valid_categories, initial_text=f"## {t.capitalize()} Categories\n\n")
     
