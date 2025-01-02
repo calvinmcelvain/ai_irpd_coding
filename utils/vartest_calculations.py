@@ -132,36 +132,6 @@ def definition_similarity(test_responses: list) -> pd.DataFrame:
     return pd.concat(dfs, axis=0, ignore_index=True)
 
 
-def keep_decision(responses: dict) -> pd.DataFrame:
-    """
-    Gets keep decision from Stage 1r.
-    """
-    keep_decisions = {key: [] for key in responses.keys()}
-    for key in responses.keys():
-        replications = responses[key]
-        cat_keep_decisions = {}
-        for replication in replications:
-            final_cats = replication['final_categories']
-            for v in range(len(final_cats)):
-                cat_name = final_cats[v]['category_name']
-                if cat_name not in cat_keep_decisions:
-                    cat_keep_decisions[cat_name] = []
-                cat_keep_decisions[cat_name].append(final_cats[v]['keep_decision'])
-        keep_decisions[key] = cat_keep_decisions
-    
-    data = []
-    for key, cat_decisions in keep_decisions.items():
-        for cat_name, decisions in cat_decisions.items():
-            for decision in decisions:
-                data.append({
-                    'instance_type': key,
-                    'category': cat_name,
-                    'keep_decision': int(decision)
-                })
-    
-    return pd.DataFrame(data)
-
-
 def categorizations(responses: list[pd.DataFrame]) -> pd.DataFrame:
     """
     Gets categorizations of Stage 2 or Stage 3 and returns a DataFrame of mean consistency.
