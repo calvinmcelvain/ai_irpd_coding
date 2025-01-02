@@ -12,3 +12,6 @@ __pycache__/
 
 # Ignore configs
 configs.env
+
+# Ignore notebooks
+*.ipynb
