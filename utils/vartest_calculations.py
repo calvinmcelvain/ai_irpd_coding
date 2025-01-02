@@ -1,6 +1,5 @@
 # Packages
 import sys, os
-import json
 import importlib
 import numpy as np
 import pandas as pd
@@ -13,7 +12,9 @@ sys.path.append(os.path.dirname(os.getcwd()))
 
 # Modules
 import helper_functions as f
+import schemas.output_structures as outstr
 importlib.reload(f)
+importlib.reload(outstr)
 
 
 def get_responses(vartest_dir: str, test_number: int, instance: str = 'uni'):
