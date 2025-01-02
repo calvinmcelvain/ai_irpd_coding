@@ -326,7 +326,7 @@ def json_to_output(test_dir: str, instance: str, stage: str, output_format: str 
         else:
             categories = stage_1c_2_data.refined_categories
             stage_1c_category_names = {cat.category_name for cat in categories}
-            text = ""
+            text = f"# Stage 1c Categories\n\n"
             text += _format_categories(categories, initial_text="## Unified Categories\n\n")
             for i in instances:
                 instance_types = get_instance_types(instance=i)
