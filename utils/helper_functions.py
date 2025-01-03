@@ -124,10 +124,10 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
     """
     Creates test directory path.
     """
-    if test_type != 'vartest' and (instance is None or stage is None):
-        raise ValueError("Instance and Stage must be provided for test types other than 'vartest'.")
+    if test_type != 'replication' and (instance is None or stage is None):
+        raise ValueError("Instance and Stage must be provided for test types other than 'replication'.")
     
-    is_new_test = test_type != 'vartest' and any(s in {'0', '1'} for s in stage)
+    is_new_test = test_type != 'replication' and any(s in {'0', '1'} for s in stage)
     
     if test_type == 'test':
         instance_dir = os.path.join(output_dir, instance)
@@ -145,13 +145,13 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
         subtest_num = get_max_test_number(subtest_dir, '')
         return [os.path.join(subtest_dir, str(subtest_num + (1 if is_new_test else 0)))]
     
-    if test_type == 'vartest':
-        var_test_dir = os.path.join(output_dir, 'var_tests')
-        os.makedirs(var_test_dir, exist_ok=True)
-        test_num = get_max_test_number(var_test_dir, 'test_')
-        return [os.path.join(var_test_dir, f"test_{test_num}")]
+    if test_type == 'replication':
+        replication_dir = os.path.join(output_dir, 'replication_tests')
+        os.makedirs(replication_dir, exist_ok=True)
+        test_num = get_max_test_number(replication_dir, 'test_')
+        return [os.path.join(replication_dir, f"test_{test_num}")]
     
-    raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'vartest'.")
+    raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'replication'.")
 
 
 def get_system_prompt(instance: str, ra: str, treatment: str, stage: str, prompt_path: str, test_path: str) -> dict:
