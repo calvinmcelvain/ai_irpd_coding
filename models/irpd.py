@@ -1,7 +1,7 @@
 # Packages
 import os, sys
 import importlib
-import logging
+import logging as log
 from itertools import product
 
 # Appending src dir. for module import
@@ -404,7 +404,32 @@ class IRPD:
             stage (str): The stage to be run.
             treatment (str): The treatment to be run.
             N (int): The number of replications.
-            **kwargs:
-                - max_instances (int): Maximum number of instances used in Stage 2 and/or 3.
         """
-        pass
+        
+        # Validate arguments
+        if not all(isinstance(arg, str) for arg in [instance, ra, stage, treatment]):
+            raise ValueError("Only one value is allowed for each argument: stage, ra, treatment, instance")
+        if N < 1:
+            raise ValueError("N must be greater than 0.")
+        elif N == 1:
+            log.warning("N is equal to 1, consider running a single test instead.")
+        
+        f._validate_arg([stage], self._valid_stages, "stages")
+        f._validate_arg([ra], self._valid_ras, "ras")
+        f._validate_arg([treatment], self._valid_treatments, "treatments")
+        f._validate_arg([instance], ['uni', 'uniresp', 'switch'], "instance")
+        
+        # Getting directory
+        test_dir = f.get_test_directory(
+            output_dir=self.OUTPATH,
+            instance=instance,
+            test_type="replication",
+            stage=stage,
+        )
+        
+        # Compressed test info
+        test_info = dict(instance=instance, ra=ra, treatment=treatment, stage=stage)
+
+        for n in range(1, N+1):
+            print(f"Running replication {n}/{N}....", end="\r")
+
