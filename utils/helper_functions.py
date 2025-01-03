@@ -148,7 +148,7 @@ def get_test_directory(output_dir: str, test_type: str, stage: list = None, inst
     if test_type == 'replication':
         replication_dir = os.path.join(output_dir, 'replication_tests')
         os.makedirs(replication_dir, exist_ok=True)
-        test_num = get_max_test_number(replication_dir, 'test_')
+        test_num = get_max_test_number(replication_dir, 'test_') + 1
         return [os.path.join(replication_dir, f"test_{test_num}")]
     
     raise ValueError("Invalid test_type. Must be 'test', 'subtest', or 'replication'.")
